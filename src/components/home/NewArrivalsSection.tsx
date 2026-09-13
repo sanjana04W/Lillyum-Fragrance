@@ -1,0 +1,33 @@
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+import ProductCard from '@/components/products/ProductCard';
+import { getNewArrivals } from '@/data/products';
+
+export default function NewArrivalsSection() {
+  const products = getNewArrivals(4);
+
+  return (
+    <section className="py-16 bg-brand-white">
+      <div className="container-padded">
+        <div className="flex items-end justify-between mb-10">
+          <div>
+            <p className="text-brand-gold text-xs uppercase tracking-[0.3em] font-semibold mb-2">Just In</p>
+            <h2 className="section-heading">New Arrivals</h2>
+            <p className="text-brand-mid text-sm mt-2">Fresh fragrances just added — be the first to discover them</p>
+          </div>
+          <Link
+            href="/shop/new-arrivals"
+            className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-brand-gold hover:text-brand-gold-dark transition-colors group shrink-0"
+          >
+            See all <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

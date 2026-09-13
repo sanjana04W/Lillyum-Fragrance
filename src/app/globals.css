@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Custom font variables ─────────────────────────────────── */
+:root {
+  --font-playfair: 'Playfair Display', Georgia, serif;
+  --font-inter: 'Inter', system-ui, sans-serif;
+}
+
+/* ─── Global base ────────────────────────────────────────────── */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-brand-cream text-brand-charcoal font-sans;
+    line-height: 1.7;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4 {
+    @apply font-serif text-brand-charcoal;
+    line-height: 1.25;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-brand-ivory;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-brand-gold/40 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-gold;
+  }
+}
+
+/* ─── Component utilities ────────────────────────────────────── */
+@layer components {
+
+  /* Container with consistent side padding */
+  .container-padded {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Section heading */
+  .section-heading {
+    @apply font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-brand-charcoal;
+  }
+
+  /* Section subheading */
+  .section-subheading {
+    @apply text-sm sm:text-base text-brand-mid mt-2 max-w-xl;
+  }
+
+  /* Gold text gradient */
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #8A6415 0%, #B8892A 40%, #D4A94E 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Product grid */
+  .product-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6;
+  }
+
+  /* Section divider */
+  .section-divider {
+    @apply w-16 h-0.5 bg-gold-gradient mx-auto rounded-full;
+  }
+
+  /* Pill tag */
+  .tag-pill {
+    @apply inline-block text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full;
+  }
+
+  /* Card surface */
+  .card-surface {
+    @apply bg-brand-white rounded-2xl border border-brand-light shadow-card;
+  }
+
+  /* Card hover */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
+  }
+
+  /* Input base */
+  .input-base {
+    @apply w-full bg-brand-white border border-brand-light rounded-xl px-4 py-3 text-brand-charcoal text-sm
+    placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold
+    transition-all duration-200;
+  }
+
+  /* Select base */
+  .select-base {
+    @apply input-base appearance-none cursor-pointer;
+  }
+
+  /* Gold badge */
+  .badge-gold {
+    @apply tag-pill bg-brand-gold-soft text-brand-gold-dark border border-brand-gold/20;
+  }
+
+  /* Trust strip item */
+  .trust-item {
+    @apply flex flex-col items-center gap-2 text-center px-3;
+  }
+}
+
+/* ─── Utility overrides ──────────────────────────────────────── */
+@layer utilities {
+  .bg-gold-gradient {
+    background: linear-gradient(135deg, #8A6415 0%, #B8892A 40%, #D4A94E 70%, #EDD590 100%);
+  }
+  .border-gold-gradient {
+    border-image: linear-gradient(135deg, #8A6415, #D4A94E) 1;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
