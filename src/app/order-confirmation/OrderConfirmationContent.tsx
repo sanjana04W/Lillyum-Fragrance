@@ -18,60 +18,60 @@ export default function OrderConfirmationContent() {
   );
 
   return (
-    <div className="min-h-screen bg-brand-charcoal flex items-center justify-center py-12">
+    <div className="min-h-screen bg-brand-cream flex items-center justify-center py-12">
       <div className="container-padded max-w-lg">
-        <div className="bg-brand-charcoal rounded-2xl border border-brand-gold/20 p-8 text-center">
+        <div className="bg-brand-white rounded-3xl border border-brand-light p-8 sm:p-10 text-center shadow-card">
           <div className="flex justify-center mb-5">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <CheckCircle size={40} className="text-emerald-400" />
+            <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+              <CheckCircle size={36} className="text-emerald-600" />
             </div>
           </div>
 
-          <h1 className="font-serif text-2xl font-bold text-brand-white mb-2">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-brand-charcoal mb-2">
             Order Placed Successfully!
           </h1>
-          <p className="text-brand-muted text-sm mb-6">
-            Thank you for your order. We'll confirm it shortly and arrange delivery.
+          <p className="text-brand-mid text-sm mb-6">
+            Thank you for your order. We'll confirm it shortly and arrange island-wide delivery.
           </p>
 
-          <div className="bg-brand-dark rounded-xl p-5 mb-6 text-left space-y-3">
+          <div className="bg-brand-cream rounded-2xl p-5 mb-6 text-left space-y-3 border border-brand-light">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-brand-muted">Order Reference</span>
-              <span className="text-brand-gold font-bold font-mono">{orderId}</span>
+              <span className="text-brand-mid">Order Reference</span>
+              <span className="text-brand-gold-dark font-bold font-mono text-base">{orderId}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-brand-muted">Total Amount</span>
-              <span className="text-brand-white font-semibold">{formatPrice(total)}</span>
+              <span className="text-brand-mid">Total Amount</span>
+              <span className="text-brand-charcoal font-bold text-base">{formatPrice(total)}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-brand-muted">Payment Method</span>
-              <span className="text-brand-white">Cash on Delivery</span>
+              <span className="text-brand-mid">Payment Method</span>
+              <span className="text-brand-charcoal font-medium">Cash on Delivery</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-brand-muted">Estimated Delivery</span>
-              <span className="text-brand-white">2–5 Business Days</span>
+              <span className="text-brand-mid">Estimated Delivery</span>
+              <span className="text-brand-charcoal font-medium">2–5 Business Days</span>
             </div>
           </div>
 
           {/* Steps */}
           <div className="space-y-3 mb-6 text-left">
             {[
-              { icon: CheckCircle, label: 'Order Received', desc: 'Your order is in our system', done: true },
-              { icon: Package, label: 'Order Confirmation', desc: 'We\'ll call/WhatsApp to confirm', done: false },
-              { icon: Package, label: 'Dispatched', desc: 'Handed to courier for delivery', done: false },
+              { icon: CheckCircle, label: 'Order Received', desc: 'Your order is recorded in our system', done: true },
+              { icon: Package, label: 'Order Confirmation', desc: 'We\'ll call or message on WhatsApp to confirm details', done: false },
+              { icon: Package, label: 'Dispatched', desc: 'Handed over to courier rider for delivery', done: false },
             ].map(({ icon: Icon, label, desc, done }) => (
               <div key={label} className="flex items-start gap-3">
-                <Icon size={16} className={done ? 'text-emerald-400 mt-0.5' : 'text-brand-mid mt-0.5'} />
+                <Icon size={18} className={done ? 'text-emerald-600 mt-0.5' : 'text-brand-muted mt-0.5'} />
                 <div>
-                  <p className={`text-sm font-medium ${done ? 'text-brand-white' : 'text-brand-muted'}`}>{label}</p>
-                  <p className="text-brand-muted text-xs">{desc}</p>
+                  <p className={`text-sm font-semibold ${done ? 'text-brand-charcoal' : 'text-brand-muted'}`}>{label}</p>
+                  <p className="text-brand-mid text-xs">{desc}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <p className="text-brand-muted text-xs mb-5">
-            A confirmation email has been sent to your inbox. You can also reach us via WhatsApp for any queries.
+          <p className="text-brand-muted text-xs mb-6 leading-relaxed">
+            A confirmation email has been sent to your inbox. You can also reach us via WhatsApp for any queries regarding your shipment.
           </p>
 
           <div className="flex flex-col gap-3">
