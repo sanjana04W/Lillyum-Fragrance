@@ -61,7 +61,7 @@ const TIKTOK_PIXEL_ID = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID ?? '';
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
-      <body className="bg-brand-charcoal text-brand-light">
+      <body className="bg-brand-cream text-brand-charcoal">
         <AuthProvider>
           {/* Organization Schema */}
           <script
