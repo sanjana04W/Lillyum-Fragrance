@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import HeroCarousel from '@/components/home/HeroCarousel';
 import TrustStrip from '@/components/home/TrustStrip';
 import CategoryNav from '@/components/home/CategoryNav';
+import RitualBanner from '@/components/home/RitualBanner';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
 import BestSellersSection from '@/components/home/BestSellersSection';
 import NewArrivalsSection from '@/components/home/NewArrivalsSection';
@@ -27,6 +28,7 @@ export default function HomePage() {
       <HeroCarousel />
       <TrustStrip />
       <CategoryNav />
+      <RitualBanner />
       <FeaturedProducts />
       <BrandStoryBanner />
       <BestSellersSection />
