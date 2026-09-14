@@ -128,6 +128,42 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
+
+      {/* Google Maps Section */}
+      <div className="border-t border-brand-light bg-brand-white">
+        <div className="container-padded py-10">
+          <div className="text-center mb-6">
+            <p className="text-brand-gold text-xs uppercase tracking-widest font-semibold mb-1">Find Us</p>
+            <h2 className="font-serif text-2xl font-bold text-brand-charcoal">Our Location</h2>
+            <p className="text-brand-mid text-sm mt-1">Colombo 01200, Sri Lanka</p>
+          </div>
+
+          <div className="rounded-3xl overflow-hidden border border-brand-light shadow-card" style={{ height: '420px' }}>
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63372.12795924673!2d79.82119965820313!3d6.921837799999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ae259251b57c025%3A0x78fed1f46eca1b19!2sColombo%2001200%2C%20Sri%20Lanka!5e0!3m2!1sen!2slk!4v1694000000000!5m2!1sen!2slk"
+              width="100%"
+              height="100%"
+              style={{ border: 0, filter: 'sepia(20%) saturate(80%) brightness(1.05)' }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Lillyum Fragrance Studio — Colombo, Sri Lanka"
+            />
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <MapPin size={14} className="text-brand-gold" />
+            <a
+              href="https://maps.google.com/?q=Colombo+01200+Sri+Lanka"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-mid text-xs hover:text-brand-gold transition-colors underline underline-offset-2"
+            >
+              Open in Google Maps
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

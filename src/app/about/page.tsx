@@ -143,10 +143,10 @@ export default function AboutPage() {
           {/* Bottom Milestone Timeline Track */}
           <div className="pt-10 border-t border-brand-light/80">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-10">
-              {/* 2005 */}
+              {/* 2020 */}
               <div>
                 <div className="w-7 h-[2px] bg-brand-gold mb-2" />
-                <p className="text-xs font-semibold tracking-widest text-brand-gold font-mono">2005</p>
+                <p className="text-xs font-semibold tracking-widest text-brand-gold font-mono">2020</p>
                 <h4 className="font-serif text-lg sm:text-xl font-bold text-brand-charcoal mt-2 mb-1.5">
                   A Fragrant Beginning
                 </h4>
@@ -156,10 +156,10 @@ export default function AboutPage() {
                 <div className="w-2 h-2 rounded-full bg-brand-gold mt-5" />
               </div>
 
-              {/* 2010 */}
+              {/* 2022 */}
               <div>
                 <div className="w-7 h-[2px] bg-brand-gold mb-2" />
-                <p className="text-xs font-semibold tracking-widest text-brand-gold font-mono">2010</p>
+                <p className="text-xs font-semibold tracking-widest text-brand-gold font-mono">2022</p>
                 <h4 className="font-serif text-lg sm:text-xl font-bold text-brand-charcoal mt-2 mb-1.5">
                   Craft Refined
                 </h4>
@@ -169,10 +169,10 @@ export default function AboutPage() {
                 <div className="w-2 h-2 rounded-full bg-brand-gold mt-5" />
               </div>
 
-              {/* 2018 */}
+              {/* 2023 */}
               <div>
                 <div className="w-7 h-[2px] bg-brand-gold mb-2" />
-                <p className="text-xs font-semibold tracking-widest text-brand-gold font-mono">2018</p>
+                <p className="text-xs font-semibold tracking-widest text-brand-gold font-mono">2023</p>
                 <h4 className="font-serif text-lg sm:text-xl font-bold text-brand-charcoal mt-2 mb-1.5">
                   Signature Scents
                 </h4>

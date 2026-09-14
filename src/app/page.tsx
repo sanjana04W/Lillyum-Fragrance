@@ -4,12 +4,15 @@ import TrustStrip from '@/components/home/TrustStrip';
 import CategoryNav from '@/components/home/CategoryNav';
 import RitualBanner from '@/components/home/RitualBanner';
 import FragrancesThroughVideo from '@/components/home/FragrancesThroughVideo';
+import EditorialSpotlight from '@/components/home/EditorialSpotlight';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
 import BestSellersSection from '@/components/home/BestSellersSection';
 import NewArrivalsSection from '@/components/home/NewArrivalsSection';
 import BrandStoryBanner from '@/components/home/BrandStoryBanner';
 import TestimonialsSection from '@/components/home/TestimonialsSection';
+import FindYourScentBanner from '@/components/home/FindYourScentBanner';
 import InstagramFeed from '@/components/home/InstagramFeed';
+import BrandPerksSection from '@/components/home/BrandPerksSection';
 import WhatsAppFAB from '@/components/home/WhatsAppFAB';
 
 export const metadata: Metadata = {
@@ -31,12 +34,15 @@ export default function HomePage() {
       <CategoryNav />
       <RitualBanner />
       <FragrancesThroughVideo />
+      <EditorialSpotlight />
       <FeaturedProducts />
       <BrandStoryBanner />
       <BestSellersSection />
       <NewArrivalsSection />
       <TestimonialsSection />
+      <FindYourScentBanner />
       <InstagramFeed />
+      <BrandPerksSection />
       <WhatsAppFAB />
     </main>
   );
