@@ -5,6 +5,7 @@
 export type FragranceType = 'EDP' | 'EDT' | 'Extrait' | 'EDC' | 'Parfum';
 export type FragranceFamily = 'Floral' | 'Oriental' | 'Woody' | 'Fresh' | 'Citrus' | 'Aquatic' | 'Gourmand' | 'Chypre' | 'Fougere' | 'Musk' | 'Spicy';
 export type Gender = 'Men' | 'Women' | 'Unisex';
+export type FragranceGender = Gender;
 export type ProductStatus = 'active' | 'hidden' | 'out_of_stock';
 export type OrderStatus = 'Pending' | 'Confirmed' | 'Processing' | 'Dispatched' | 'Completed' | 'Cancelled';
 export type UserRole = 'Owner' | 'Staff';

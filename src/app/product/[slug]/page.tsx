@@ -82,21 +82,21 @@ export default function ProductDetailPage({ params }: Props) {
   );
 
   return (
-    <div className="min-h-screen bg-brand-charcoal">
+    <div className="min-h-screen bg-brand-cream">
       <div className="container-padded py-6 sm:py-10">
         {/* Breadcrumb */}
-        <nav className="text-xs text-brand-muted mb-6 flex gap-2 flex-wrap" aria-label="breadcrumb">
+        <nav className="text-xs text-brand-mid mb-6 flex gap-2 flex-wrap" aria-label="breadcrumb">
           <Link href="/" className="hover:text-brand-gold">Home</Link>
           <span>/</span>
           <Link href="/shop" className="hover:text-brand-gold">Shop</Link>
           <span>/</span>
-          <span className="text-brand-light">{product.title}</span>
+          <span className="text-brand-charcoal font-medium">{product.title}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Image Gallery */}
           <div className="space-y-3">
-            <div className="relative aspect-square rounded-xl overflow-hidden bg-brand-charcoal">
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-brand-ivory border border-brand-light shadow-card">
               <Image
                 src={product.images[activeImage] ?? product.images[0]}
                 alt={`${product.brand} ${product.title} ${selectedVariant.size}ml`}
@@ -109,14 +109,14 @@ export default function ProductDetailPage({ params }: Props) {
                 <>
                   <button
                     onClick={() => setActiveImage((i) => (i - 1 + product.images.length) % product.images.length)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-brand-charcoal/60 rounded-full text-brand-white hover:bg-brand-gold/80 hover:text-brand-charcoal transition-colors"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-white/80 backdrop-blur-sm rounded-full text-brand-charcoal hover:bg-brand-gold hover:text-white transition-colors shadow-soft"
                     aria-label="Previous image"
                   >
                     <ChevronLeft size={18} />
                   </button>
                   <button
                     onClick={() => setActiveImage((i) => (i + 1) % product.images.length)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-brand-charcoal/60 rounded-full text-brand-white hover:bg-brand-gold/80 hover:text-brand-charcoal transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-white/80 backdrop-blur-sm rounded-full text-brand-charcoal hover:bg-brand-gold hover:text-white transition-colors shadow-soft"
                     aria-label="Next image"
                   >
                     <ChevronRight size={18} />
@@ -130,8 +130,8 @@ export default function ProductDetailPage({ params }: Props) {
                   <button
                     key={i}
                     onClick={() => setActiveImage(i)}
-                    className={`relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
-                      i === activeImage ? 'border-brand-gold' : 'border-transparent'
+                    className={`relative w-16 h-16 shrink-0 rounded-xl overflow-hidden border-2 transition-colors ${
+                      i === activeImage ? 'border-brand-gold shadow-sm' : 'border-brand-light bg-brand-ivory'
                     }`}
                   >
                     <Image src={img} alt={`View ${i + 1}`} fill className="object-cover" />
@@ -142,10 +142,10 @@ export default function ProductDetailPage({ params }: Props) {
           </div>
 
           {/* Product Info */}
-          <div className="space-y-5">
+          <div className="space-y-5 bg-brand-white p-6 sm:p-8 rounded-3xl border border-brand-light shadow-card">
             <div>
-              <p className="text-brand-muted text-xs uppercase tracking-widest mb-1">{product.brand}</p>
-              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-brand-white">{product.title}</h1>
+              <p className="text-brand-gold text-xs uppercase tracking-widest font-semibold mb-1">{product.brand}</p>
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-brand-charcoal">{product.title}</h1>
               <div className="flex flex-wrap gap-2 mt-2">
                 <Badge variant="gray">{product.fragranceType}</Badge>
                 <Badge variant="gray">{product.fragranceFamily}</Badge>
@@ -180,23 +180,23 @@ export default function ProductDetailPage({ params }: Props) {
             {/* Size selector */}
             {product.variants.length > 1 && (
               <div>
-                <p className="text-brand-muted text-xs uppercase tracking-widest mb-2">Size</p>
+                <p className="text-brand-charcoal text-xs font-semibold uppercase tracking-wider mb-2">Size</p>
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
                     <button
                       key={v.sku}
                       onClick={() => { setSelectedVariant(v); setQuantity(1); }}
                       disabled={v.stock === 0}
-                      className={`px-4 py-2 rounded border text-sm transition-colors ${
+                      className={`px-4 py-2 rounded-xl border text-sm transition-colors ${
                         v.sku === selectedVariant.sku
-                          ? 'border-brand-gold bg-brand-gold/10 text-brand-gold'
+                          ? 'border-brand-gold bg-brand-gold-soft text-brand-gold-dark font-semibold'
                           : v.stock === 0
-                          ? 'border-brand-mid/30 text-brand-mid line-through cursor-not-allowed'
-                          : 'border-brand-mid/50 text-brand-light hover:border-brand-gold/50'
+                          ? 'border-brand-light text-brand-muted line-through cursor-not-allowed bg-brand-ivory'
+                          : 'border-brand-light bg-brand-cream text-brand-dark hover:border-brand-gold/40'
                       }`}
                     >
                       {v.size}ml
-                      {v.salePrice && <span className="text-xs text-brand-gold ml-1">Sale</span>}
+                      {v.salePrice && <span className="text-xs text-brand-gold ml-1 font-semibold">Sale</span>}
                     </button>
                   ))}
                 </div>
@@ -205,19 +205,19 @@ export default function ProductDetailPage({ params }: Props) {
 
             {/* Quantity */}
             <div>
-              <p className="text-brand-muted text-xs uppercase tracking-widest mb-2">Quantity</p>
+              <p className="text-brand-charcoal text-xs font-semibold uppercase tracking-wider mb-2">Quantity</p>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-9 h-9 rounded-full border border-brand-mid/50 flex items-center justify-center text-brand-light hover:border-brand-gold hover:text-brand-gold transition-colors"
+                  className="w-9 h-9 rounded-full border border-brand-light bg-brand-cream flex items-center justify-center text-brand-charcoal hover:border-brand-gold hover:text-brand-gold transition-colors"
                 >
                   -
                 </button>
-                <span className="text-brand-white font-semibold w-8 text-center">{quantity}</span>
+                <span className="text-brand-charcoal font-semibold w-8 text-center">{quantity}</span>
                 <button
                   onClick={() => setQuantity(Math.min(selectedVariant.stock, quantity + 1))}
                   disabled={quantity >= selectedVariant.stock}
-                  className="w-9 h-9 rounded-full border border-brand-mid/50 flex items-center justify-center text-brand-light hover:border-brand-gold hover:text-brand-gold transition-colors disabled:opacity-50"
+                  className="w-9 h-9 rounded-full border border-brand-light bg-brand-cream flex items-center justify-center text-brand-charcoal hover:border-brand-gold hover:text-brand-gold transition-colors disabled:opacity-50"
                 >
                   +
                 </button>
@@ -244,18 +244,18 @@ export default function ProductDetailPage({ params }: Props) {
             </div>
 
             {/* Fragrance Notes */}
-            <div className="bg-brand-charcoal rounded-xl p-5 space-y-3">
-              <h2 className="text-brand-white font-semibold text-sm">Fragrance Notes</h2>
+            <div className="bg-brand-cream rounded-2xl p-5 border border-brand-light space-y-3">
+              <h2 className="text-brand-charcoal font-semibold text-sm">Fragrance Notes</h2>
               {[
                 { label: 'Top Notes', notes: product.notes.top },
                 { label: 'Heart Notes', notes: product.notes.middle },
                 { label: 'Base Notes', notes: product.notes.base },
               ].map(({ label, notes }) => (
                 <div key={label} className="flex gap-3">
-                  <span className="text-brand-muted text-xs w-24 shrink-0 pt-0.5">{label}</span>
+                  <span className="text-brand-mid text-xs w-24 shrink-0 pt-0.5">{label}</span>
                   <div className="flex flex-wrap gap-1.5">
                     {notes.map((n) => (
-                      <span key={n} className="text-xs bg-brand-dark text-brand-light px-2 py-0.5 rounded">
+                      <span key={n} className="text-xs bg-brand-white border border-brand-light text-brand-charcoal px-2.5 py-1 rounded-lg">
                         {n}
                       </span>
                     ))}
@@ -266,22 +266,22 @@ export default function ProductDetailPage({ params }: Props) {
 
             {/* Description */}
             <div>
-              <h2 className="text-brand-white font-semibold text-sm mb-2">About this Fragrance</h2>
-              <p className="text-brand-muted text-sm leading-relaxed">{product.description}</p>
+              <h2 className="text-brand-charcoal font-semibold text-sm mb-2">About this Fragrance</h2>
+              <p className="text-brand-mid text-sm leading-relaxed">{product.description}</p>
             </div>
 
             {/* Authenticity */}
             {product.authenticityInfo && (
-              <div className="flex items-start gap-2 bg-brand-gold/5 border border-brand-gold/20 rounded-lg p-3">
-                <Shield size={16} className="text-brand-gold mt-0.5 shrink-0" />
-                <p className="text-brand-light text-xs">{product.authenticityInfo}</p>
+              <div className="flex items-start gap-2 bg-brand-gold-soft border border-brand-gold/30 rounded-xl p-3">
+                <Shield size={16} className="text-brand-gold-dark mt-0.5 shrink-0" />
+                <p className="text-brand-gold-dark text-xs font-medium">{product.authenticityInfo}</p>
               </div>
             )}
 
             {/* Delivery */}
-            <div className="flex items-start gap-2 bg-brand-charcoal rounded-lg p-3">
+            <div className="flex items-start gap-2 bg-brand-cream border border-brand-light rounded-xl p-3">
               <Truck size={16} className="text-brand-gold mt-0.5 shrink-0" />
-              <p className="text-brand-muted text-xs">Cash on Delivery available islandwide · Colombo 1-2 days · Outstation 2-5 days</p>
+              <p className="text-brand-mid text-xs">Cash on Delivery available islandwide · Colombo 1-2 days · Outstation 2-5 days</p>
             </div>
           </div>
         </div>

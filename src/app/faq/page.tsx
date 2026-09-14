@@ -41,41 +41,41 @@ export default function FAQPage() {
   const waLink = getWhatsAppLink(WHATSAPP_NUMBER, 'Hi Lillyum Fragrance! I have a question before placing an order.');
 
   return (
-    <div className="min-h-screen bg-brand-charcoal py-12">
+    <div className="min-h-screen bg-brand-cream py-12">
       <div className="container-padded max-w-4xl space-y-8">
         <div>
-          <nav className="text-xs text-brand-muted mb-4 flex gap-2" aria-label="breadcrumb">
+          <nav className="text-xs text-brand-mid mb-4 flex gap-2" aria-label="breadcrumb">
             <Link href="/" className="hover:text-brand-gold">Home</Link>
             <span>/</span>
-            <span className="text-brand-light">FAQ</span>
+            <span className="text-brand-charcoal font-medium">FAQ</span>
           </nav>
-          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-brand-white">
+          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-brand-charcoal">
             Frequently Asked Questions
           </h1>
-          <p className="text-brand-muted text-sm mt-2">
+          <p className="text-brand-mid text-sm mt-2">
             Find answers to common questions about ordering, authenticity, and deliveries.
           </p>
         </div>
 
         <div className="space-y-4">
           {FAQS.map((faq, idx) => (
-            <div key={idx} className="bg-brand-charcoal rounded-xl p-5 border border-brand-mid/20 space-y-2">
-              <h2 className="font-serif text-base font-bold text-brand-white flex items-start gap-2">
+            <div key={idx} className="bg-brand-white rounded-2xl p-5 sm:p-6 border border-brand-light shadow-card space-y-2">
+              <h2 className="font-serif text-base font-bold text-brand-charcoal flex items-start gap-2.5">
                 <HelpCircle size={18} className="text-brand-gold shrink-0 mt-0.5" />
                 <span>{faq.q}</span>
               </h2>
-              <p className="text-brand-muted text-sm leading-relaxed pl-6">
+              <p className="text-brand-mid text-sm leading-relaxed pl-7">
                 {faq.a}
               </p>
             </div>
           ))}
         </div>
 
-        <div className="bg-brand-charcoal rounded-2xl p-6 sm:p-8 border border-brand-gold/20 text-center space-y-4">
-          <h2 className="font-serif text-xl font-bold text-brand-white">
+        <div className="bg-brand-white rounded-3xl p-6 sm:p-8 border border-brand-light shadow-card text-center space-y-4">
+          <h2 className="font-serif text-xl font-bold text-brand-charcoal">
             Still have questions?
           </h2>
-          <p className="text-brand-muted text-sm max-w-md mx-auto">
+          <p className="text-brand-mid text-sm max-w-md mx-auto">
             Our team is ready to answer your questions and help you discover the perfect perfume.
           </p>
           <div className="flex justify-center gap-4">
