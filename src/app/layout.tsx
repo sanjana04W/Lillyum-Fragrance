@@ -3,10 +3,8 @@ import { Playfair_Display, Inter } from 'next/font/google';
 import Script from 'next/script';
 import { Toaster } from 'react-hot-toast';
 import './globals.css';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import CartDrawer from '@/components/cart/CartDrawer';
 import { AuthProvider } from '@/context/AuthContext';
+import ConditionalLayout from '@/components/layout/ConditionalLayout';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -90,10 +88,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           />
 
-          <Header />
-          <main>{children}</main>
-          <Footer />
-          <CartDrawer />
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
           <Toaster position="bottom-right" />
         </AuthProvider>
 

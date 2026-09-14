@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, ShoppingBag, Package, BarChart2,
   Users, Settings, Tag, LogOut, Menu
 } from 'lucide-react';
-import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -16,29 +14,33 @@ const NAV_ITEMS = [
   { label: 'Products', href: '/admin/products', icon: Package },
   { label: 'Inventory', href: '/admin/inventory', icon: Package },
   { label: 'Promotions', href: '/admin/promotions', icon: Tag },
-  { label: 'Analytics', href: '/admin/analytics', icon: BarChart2, ownerOnly: true },
+  { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
   { label: 'Customers', href: '/admin/customers', icon: Users },
-  { label: 'Settings', href: '/admin/settings', icon: Settings, ownerOnly: true },
+  { label: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, adminUser, loading, signOut, isStaff } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authed, setAuthed] = useState(false);
 
-  // Bypass authentication check and layout for the login page
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
+  // Always allow the login page through without any check
+  const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
-    if (!loading && (!user || !adminUser)) {
-      router.push('/admin/login');
+    if (isLoginPage) return;
+    const ok = sessionStorage.getItem('admin_auth') === 'true';
+    if (!ok) {
+      router.replace('/admin/login');
+    } else {
+      setAuthed(true);
     }
-  }, [user, adminUser, loading, router]);
+  }, [pathname, isLoginPage, router]);
 
-  if (loading) {
+  if (isLoginPage) return <>{children}</>;
+
+  if (!authed) {
     return (
       <div className="min-h-screen bg-brand-charcoal flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-brand-gold border-t-transparent rounded-full" />
@@ -46,11 +48,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!user || !adminUser) return null;
-
-  const visibleNav = NAV_ITEMS.filter((item) =>
-    !item.ownerOnly || adminUser.role === 'Owner'
-  );
+  const handleSignOut = () => {
+    sessionStorage.removeItem('admin_auth');
+    router.push('/admin/login');
+  };
 
   return (
     <div className="min-h-screen bg-brand-charcoal flex">
@@ -71,7 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {visibleNav.map(({ label, href, icon: Icon }) => (
+          {NAV_ITEMS.map(({ label, href, icon: Icon }) => (
             <Link
               key={href}
               href={href}
@@ -90,11 +91,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="p-4 border-t border-brand-mid/30">
           <div className="mb-3">
-            <p className="text-brand-white text-sm font-medium">{adminUser.name}</p>
-            <p className="text-brand-muted text-xs">{adminUser.role}</p>
+            <p className="text-brand-white text-sm font-medium">Lillyum Admin</p>
+            <p className="text-brand-muted text-xs">Owner</p>
           </div>
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             className="flex items-center gap-2 text-brand-muted text-sm hover:text-red-400 transition-colors"
           >
             <LogOut size={14} /> Sign Out

@@ -1,146 +1,136 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
+import Image from 'next/image';
+import { Eye, EyeOff, Lock, Mail, Loader2, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Hardcoded admin credentials — change these to your own values or use env vars
+const ADMIN_EMAIL    = process.env.NEXT_PUBLIC_ADMIN_EMAIL    ?? 'admin@lillyumfragrance.lk';
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? 'Lillyum@Admin2025';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [isSetup, setIsSetup] = useState(false);
-  const [name, setName] = useState('Lillyum Admin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
-    try {
-      if (isSetup) {
-        // Call setup API to create Owner account via Admin SDK
-        const res = await fetch('/api/admin/setup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, name }),
-        });
 
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || 'Failed to setup admin account');
-        }
+    // Simulate a brief delay for UX
+    await new Promise((r) => setTimeout(r, 600));
 
-        toast.success('Admin account created! Signing you in...');
-      }
-
-      // Sign in with Firebase Client Auth
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-
-      // Verify they are an admin user
-      const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
-      if (!userDoc.exists()) {
-        await auth.signOut();
-        toast.error('Access denied. No admin record found in Firestore.');
-        return;
-      }
-
-      toast.success('Signed in successfully!');
+    if (email.trim() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      // Store session flag in sessionStorage (cleared when browser closes)
+      sessionStorage.setItem('admin_auth', 'true');
+      toast.success('Welcome back, Admin!', { style: { background: '#1C1C1E', color: '#B8892A' } });
       router.push('/admin');
-    } catch (err: unknown) {
-      console.error(err);
-      const message = err instanceof Error ? err.message : 'Login failed';
-      if (message.includes('wrong-password') || message.includes('invalid-credential')) {
-        toast.error('Invalid email or password.');
-      } else if (message.includes('user-not-found')) {
-        toast.error('User not found. Use "First-Time Admin Setup" tab below to create your account.');
-      } else {
-        toast.error(message);
-      }
-    } finally {
-      setLoading(false);
+    } else {
+      setError('Invalid email or password.');
+      toast.error('Access denied.');
     }
+
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-brand-charcoal flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-brand-charcoal rounded-2xl border border-brand-mid/30 p-8 shadow-2xl">
-        <div className="text-center mb-6">
-          <h1 className="font-serif text-2xl font-bold text-brand-gold">LILLYUM</h1>
-          <p className="text-brand-muted text-xs uppercase tracking-widest mt-1">Admin Portal</p>
+      {/* Background subtle texture */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-brand-gold/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-brand-gold/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-sm">
+        {/* Card */}
+        <div className="bg-[#232323] rounded-2xl border border-brand-mid/30 shadow-2xl overflow-hidden">
+          {/* Top accent bar */}
+          <div className="h-1 w-full bg-gradient-to-r from-brand-gold via-brand-gold-lighter to-brand-gold" />
+
+          <div className="p-8">
+            {/* Logo + Title */}
+            <div className="flex flex-col items-center mb-8">
+              <div className="relative w-14 h-14 rounded-full overflow-hidden ring-2 ring-brand-gold/40 mb-4">
+                <Image src="/logo.jpg" alt="Lillyum" fill className="object-cover" />
+              </div>
+              <h1 className="font-serif text-2xl font-bold text-brand-gold tracking-wide">LILLYUM</h1>
+              <div className="flex items-center gap-1.5 mt-1">
+                <ShieldCheck size={11} className="text-brand-muted" />
+                <p className="text-brand-muted text-[11px] uppercase tracking-[0.2em]">Admin Portal</p>
+              </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-brand-muted uppercase tracking-wider">Email</label>
+                <div className="relative">
+                  <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                    placeholder="admin@lillyumfragrance.lk"
+                    className="w-full pl-10 pr-4 py-3 bg-brand-charcoal border border-brand-mid/40 rounded-xl text-sm text-white placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold/60 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-brand-muted uppercase tracking-wider">Password</label>
+                <div className="relative">
+                  <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                    placeholder="Enter your password"
+                    className="w-full pl-10 pr-11 py-3 bg-brand-charcoal border border-brand-mid/40 rounded-xl text-sm text-white placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold/60 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-gold transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error message */}
+              {error && (
+                <p className="text-red-400 text-xs text-center">{error}</p>
+              )}
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-brand-gold hover:bg-brand-gold-dark text-brand-charcoal font-bold text-sm py-3.5 rounded-xl transition-all duration-200 mt-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              >
+                {loading ? <Loader2 size={16} className="animate-spin" /> : 'Sign In'}
+              </button>
+            </form>
+          </div>
+
+          {/* Footer */}
+          <div className="px-8 pb-5 text-center">
+            <p className="text-brand-muted text-[11px]">
+              Restricted access — Lillyum staff only
+            </p>
+          </div>
         </div>
-
-        {/* Tab switcher */}
-        <div className="flex bg-brand-dark rounded-lg p-1 mb-6 border border-brand-mid/30">
-          <button
-            type="button"
-            onClick={() => setIsSetup(false)}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              !isSetup ? 'bg-brand-gold text-brand-charcoal' : 'text-brand-muted hover:text-brand-white'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsSetup(true)}
-            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              isSetup ? 'bg-brand-gold text-brand-charcoal' : 'text-brand-muted hover:text-brand-white'
-            }`}
-          >
-            First-Time Setup
-          </button>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          {isSetup && (
-            <Input
-              label="Full Name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Lillyum Owner"
-            />
-          )}
-          <Input
-            label="Email Address"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@lillyumfragrance.lk"
-          />
-          <Input
-            label="Password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Min. 6 characters"
-          />
-
-          <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
-            {loading
-              ? isSetup
-                ? 'Creating Account...'
-                : 'Signing in...'
-              : isSetup
-              ? 'Create Owner Account'
-              : 'Sign In'}
-          </Button>
-        </form>
-
-        {isSetup && (
-          <p className="text-[11px] text-brand-muted text-center mt-4 leading-relaxed">
-            This will register your account in Firebase Authentication and assign the full <strong className="text-brand-gold">Owner</strong> role in Firestore.
-          </p>
-        )}
       </div>
     </div>
   );
 }
-
