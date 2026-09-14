@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Menu, X, ChevronDown, Phone } from 'lucide-react';
+import { ShoppingCart, Menu, X, ChevronDown, Phone, User } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { SOCIAL_LINKS } from '@/lib/constants';
 
@@ -35,6 +35,7 @@ export default function Header() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const { getItemCount, openCart } = useCartStore();
   const itemCount = getItemCount();
 
@@ -143,6 +144,38 @@ export default function Header() {
                 <span>0752 369 613</span>
               </a>
 
+              {/* Account */}
+              <div className="relative">
+                <button
+                  onClick={() => setAccountOpen(!accountOpen)}
+                  onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-brand-mid hover:text-brand-gold hover:bg-brand-gold-soft transition-all duration-200"
+                  aria-label="Account"
+                >
+                  <User size={19} />
+                </button>
+                {accountOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-44 bg-brand-white border border-brand-light rounded-2xl shadow-card-hover py-2 z-50 animate-fade-in">
+                    <Link
+                      href="/login"
+                      onClick={() => setAccountOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
+                    >
+                      <User size={14} />
+                      Sign In
+                    </Link>
+                    <div className="border-t border-brand-light mx-3 my-1" />
+                    <Link
+                      href="/register"
+                      onClick={() => setAccountOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
+                    >
+                      Create Account
+                    </Link>
+                  </div>
+                )}
+              </div>
+
               {/* Cart */}
               <button
                 onClick={openCart}
@@ -209,7 +242,23 @@ export default function Header() {
                   </Link>
                 )
               )}
-              <div className="pt-4 mt-2 border-t border-brand-light flex gap-4 px-3">
+              <div className="pt-4 mt-2 border-t border-brand-light space-y-0.5 px-1">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft rounded-lg transition-colors"
+                >
+                  <User size={15} /> Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft rounded-lg transition-colors"
+                >
+                  <User size={15} /> Create Account
+                </Link>
+              </div>
+              <div className="pt-3 mt-1 border-t border-brand-light flex gap-4 px-3">
                 <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="text-brand-muted text-xs hover:text-brand-gold transition-colors">Instagram</a>
                 <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="text-brand-muted text-xs hover:text-brand-gold transition-colors">Facebook</a>
                 <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noopener noreferrer" className="text-brand-muted text-xs hover:text-brand-gold transition-colors">TikTok</a>
