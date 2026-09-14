@@ -8,26 +8,6 @@ import { SOCIAL_LINKS, STORE_PHONE, STORE_EMAIL, STORE_ADDRESS } from '@/lib/con
 export default function Footer() {
   return (
     <footer className="bg-brand-charcoal text-brand-light">
-      {/* Top trust band */}
-      <div className="border-b border-white/10">
-        <div className="container-padded py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { icon: '✅', label: '100% Authentic', desc: 'Every fragrance verified genuine' },
-            { icon: '🚚', label: 'Island-wide Delivery', desc: 'All 25 districts in Sri Lanka' },
-            { icon: '💵', label: 'Cash on Delivery', desc: 'Pay only when you receive' },
-            { icon: '↩️', label: '48-hour Returns', desc: 'Hassle-free replacement policy' },
-          ].map((t) => (
-            <div key={t.label} className="flex items-start gap-3">
-              <span className="text-2xl mt-0.5">{t.icon}</span>
-              <div>
-                <p className="text-sm font-semibold text-brand-white">{t.label}</p>
-                <p className="text-xs text-brand-muted mt-0.5">{t.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Main footer body */}
       <div className="container-padded py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
 
