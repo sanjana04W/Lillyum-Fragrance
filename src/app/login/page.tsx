@@ -1,18 +1,20 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { loginCustomer, loginCustomerWithGoogle } from '@/services/customerAuthService';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const googleProvider = new GoogleAuthProvider();
-
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
+
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,18 +26,15 @@ export default function LoginPage() {
     if (!form.email || !form.password) { toast.error('Please fill in all fields.'); return; }
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, form.email, form.password);
-      toast.success('Welcome back!', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
-      router.push('/');
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        toast.error('Invalid email or password.');
-      } else if (code === 'auth/too-many-requests') {
-        toast.error('Too many attempts. Please try again later.');
+      const res = await loginCustomer(form.email, form.password);
+      if (res.success) {
+        toast.success('Welcome back!', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
+        router.push(redirectUrl);
       } else {
-        toast.error('Sign in failed. Please try again.');
+        toast.error(res.error || 'Invalid email or password.');
       }
+    } catch {
+      toast.error('Sign in failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -44,9 +43,13 @@ export default function LoginPage() {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
-      await signInWithPopup(auth, googleProvider);
-      toast.success('Signed in with Google!', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
-      router.push('/');
+      const res = await loginCustomerWithGoogle();
+      if (res.success) {
+        toast.success('Signed in with Google!', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
+        router.push(redirectUrl);
+      } else {
+        toast.error(res.error || 'Google sign-in failed.');
+      }
     } catch {
       toast.error('Google sign-in failed. Please try again.');
     } finally {
@@ -64,6 +67,8 @@ export default function LoginPage() {
       toast.error('Could not send reset email. Check the address and try again.');
     }
   };
+
+  const registerLink = redirectUrl !== '/' ? `/register?redirect=${encodeURIComponent(redirectUrl)}` : '/register';
 
   return (
     <div className="min-h-screen flex">
@@ -115,7 +120,7 @@ export default function LoginPage() {
               <h1 className="font-serif text-3xl font-bold text-brand-charcoal mb-1">Sign In</h1>
               <p className="text-brand-mid text-sm">
                 {"Don't have an account? "}
-                <Link href="/register" className="text-brand-gold font-semibold hover:text-brand-gold-dark transition-colors underline underline-offset-2">Create one</Link>
+                <Link href={registerLink} className="text-brand-gold font-semibold hover:text-brand-gold-dark transition-colors underline underline-offset-2">Create one</Link>
               </p>
             </div>
 
@@ -184,5 +189,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-brand-cream flex items-center justify-center"><Loader2 size={24} className="animate-spin text-brand-gold" /></div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
