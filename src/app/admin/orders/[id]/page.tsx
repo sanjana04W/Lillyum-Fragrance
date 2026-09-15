@@ -81,6 +81,7 @@ export default function OrderDetailPage() {
             { label: 'Email', value: order.customer.email },
             { label: 'District', value: order.customer.district },
             { label: 'Address', value: `${order.customer.address}, ${order.customer.city}` },
+            { label: 'Verification Code', value: order.verificationCode ? `${order.verificationCode} (${order.isVerified ? 'Verified ✓' : 'Pending'})` : 'None' },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between gap-2 text-xs">
               <span className="text-brand-muted">{label}</span>
