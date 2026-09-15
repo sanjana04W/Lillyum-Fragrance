@@ -123,6 +123,8 @@ export interface Order {
   paymentStatus: PaymentStatus;
   paymentGatewayReference: string | null;
   transactionId: string | null;
+  verificationCode?: string;
+  isVerified?: boolean;
   internalNotes?: string;
   cancelReason?: string;
   createdAt: Date | string;
