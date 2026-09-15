@@ -95,43 +95,43 @@ export default function NewProductPage() {
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="text-brand-muted hover:text-brand-gold">
+        <button onClick={() => router.back()} className="text-brand-charcoal/50 hover:text-brand-gold">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="font-serif text-xl font-bold text-brand-white">Add New Product</h1>
+        <h1 className="font-serif text-xl font-bold text-brand-charcoal">Add New Product</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="bg-brand-charcoal rounded-xl p-5 border border-brand-mid/20 space-y-4">
-          <h2 className="text-brand-white font-semibold text-sm">Basic Information</h2>
+        <div className="bg-white rounded-xl p-5 border border-brand-light shadow-soft space-y-4">
+          <h2 className="text-brand-charcoal font-semibold text-sm">Basic Information</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Product Title" required value={form.title} onChange={(e) => update('title', e.target.value)} placeholder="e.g. Club de Nuit Intense" />
             <Input label="Brand" required value={form.brand} onChange={(e) => update('brand', e.target.value)} placeholder="e.g. Armaf" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-brand-light">Description</label>
-            <textarea value={form.description} onChange={(e) => update('description', e.target.value)} rows={4} placeholder="Fragrance description..." className="bg-brand-dark border border-brand-mid rounded-md px-3 py-2.5 text-brand-white text-sm placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/60 resize-none" />
+            <label className="text-sm font-medium text-brand-charcoal">Description</label>
+            <textarea value={form.description} onChange={(e) => update('description', e.target.value)} rows={4} placeholder="Fragrance description..." className="bg-brand-cream border border-brand-light rounded-md px-3 py-2.5 text-brand-charcoal text-sm placeholder-brand-charcoal/30 focus:outline-none focus:ring-2 focus:ring-brand-gold/60 resize-none" />
           </div>
         </div>
 
-        <div className="bg-brand-charcoal rounded-xl p-5 border border-brand-mid/20 space-y-4">
-          <h2 className="text-brand-white font-semibold text-sm">Fragrance Details</h2>
+        <div className="bg-white rounded-xl p-5 border border-brand-light shadow-soft space-y-4">
+          <h2 className="text-brand-charcoal font-semibold text-sm">Fragrance Details</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-brand-light">Type</label>
-              <select value={form.fragranceType} onChange={(e) => update('fragranceType', e.target.value)} className="bg-brand-dark border border-brand-mid rounded-md px-3 py-2.5 text-brand-white text-sm focus:outline-none focus:border-brand-gold">
+              <label className="text-sm font-medium text-brand-charcoal">Type</label>
+              <select value={form.fragranceType} onChange={(e) => update('fragranceType', e.target.value)} className="bg-brand-cream border border-brand-light rounded-md px-3 py-2.5 text-brand-charcoal text-sm focus:outline-none focus:border-brand-gold">
                 {FRAGRANCE_TYPES.map((t) => <option key={t}>{t}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-brand-light">Family</label>
-              <select value={form.fragranceFamily} onChange={(e) => update('fragranceFamily', e.target.value)} className="bg-brand-dark border border-brand-mid rounded-md px-3 py-2.5 text-brand-white text-sm focus:outline-none focus:border-brand-gold">
+              <label className="text-sm font-medium text-brand-charcoal">Family</label>
+              <select value={form.fragranceFamily} onChange={(e) => update('fragranceFamily', e.target.value)} className="bg-brand-cream border border-brand-light rounded-md px-3 py-2.5 text-brand-charcoal text-sm focus:outline-none focus:border-brand-gold">
                 {FRAGRANCE_FAMILIES.map((f) => <option key={f}>{f}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-brand-light">Gender</label>
-              <select value={form.gender} onChange={(e) => update('gender', e.target.value)} className="bg-brand-dark border border-brand-mid rounded-md px-3 py-2.5 text-brand-white text-sm focus:outline-none focus:border-brand-gold">
+              <label className="text-sm font-medium text-brand-charcoal">Gender</label>
+              <select value={form.gender} onChange={(e) => update('gender', e.target.value)} className="bg-brand-cream border border-brand-light rounded-md px-3 py-2.5 text-brand-charcoal text-sm focus:outline-none focus:border-brand-gold">
                 {GENDERS.map((g) => <option key={g}>{g}</option>)}
               </select>
             </div>
@@ -141,8 +141,8 @@ export default function NewProductPage() {
           <Input label="Base Notes (comma-separated)" value={form.baseNotes} onChange={(e) => update('baseNotes', e.target.value)} placeholder="e.g. Sandalwood, Musk, Amber" />
         </div>
 
-        <div className="bg-brand-charcoal rounded-xl p-5 border border-brand-mid/20 space-y-4">
-          <h2 className="text-brand-white font-semibold text-sm">Pricing & Stock</h2>
+        <div className="bg-white rounded-xl p-5 border border-brand-light shadow-soft space-y-4">
+          <h2 className="text-brand-charcoal font-semibold text-sm">Pricing & Stock</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Input label="Size (ml)" required type="number" value={form.size} onChange={(e) => update('size', e.target.value)} />
             <Input label="Price (LKR)" required type="number" value={form.price} onChange={(e) => update('price', e.target.value)} />
@@ -151,11 +151,11 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        <div className="bg-brand-charcoal rounded-xl p-5 border border-brand-mid/20 space-y-4">
-          <h2 className="text-brand-white font-semibold text-sm">Images & Flags</h2>
+        <div className="bg-white rounded-xl p-5 border border-brand-light shadow-soft space-y-4">
+          <h2 className="text-brand-charcoal font-semibold text-sm">Images & Flags</h2>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-brand-light">Image URLs (one per line)</label>
-            <textarea value={form.images} onChange={(e) => update('images', e.target.value)} rows={3} placeholder="/images/filename.jpg&#10;https://firebasestorage..." className="bg-brand-dark border border-brand-mid rounded-md px-3 py-2.5 text-brand-white text-sm placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/60 resize-none font-mono text-xs" />
+            <label className="text-sm font-medium text-brand-charcoal">Image URLs (one per line)</label>
+            <textarea value={form.images} onChange={(e) => update('images', e.target.value)} rows={3} placeholder="/images/filename.jpg&#10;https://firebasestorage..." className="bg-brand-cream border border-brand-light rounded-md px-3 py-2.5 text-brand-charcoal text-sm placeholder-brand-charcoal/30 focus:outline-none focus:ring-2 focus:ring-brand-gold/60 resize-none font-mono text-xs" />
           </div>
           <Input label="Authenticity Info" value={form.authenticityInfo} onChange={(e) => update('authenticityInfo', e.target.value)} placeholder="e.g. 100% authentic, imported from Dubai" />
           <div className="flex flex-wrap gap-4">
@@ -166,7 +166,7 @@ export default function NewProductPage() {
             ].map(({ key, label }) => (
               <label key={key} className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form[key as keyof typeof form] as boolean} onChange={(e) => update(key, e.target.checked)} className="accent-brand-gold" />
-                <span className="text-brand-light text-sm">{label}</span>
+                <span className="text-brand-charcoal text-sm">{label}</span>
               </label>
             ))}
           </div>
