@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, ChevronRight, ShoppingCart, Package, Shield, Truck } from 'lucide-react';
-import { getStoredProducts } from '@/data/products';
+import { getStoredProducts, SAMPLE_PRODUCTS } from '@/data/products';
 import { useCartStore } from '@/store/cartStore';
 import { trackViewContent, trackAddToCart } from '@/services/analyticsService';
 import { formatPrice, getDiscountPercentage, getWhatsAppLink } from '@/lib/utils';
@@ -313,3 +313,4 @@ export default function ProductDetailPage({ params }: Props) {
     </div>
   );
 }
+
