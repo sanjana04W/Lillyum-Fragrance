@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '@/components/products/ProductCard';
 import Button from '@/components/ui/Button';
-import { SAMPLE_PRODUCTS, CATEGORIES, BRANDS } from '@/data/products';
-import { FragranceGender, FragranceType, ProductSortOption } from '@/types';
+import { getStoredProducts, CATEGORIES, BRANDS } from '@/data/products';
+import { Product, FragranceGender, FragranceType, ProductSortOption } from '@/types';
 
 const GENDERS: FragranceGender[] = ['Men', 'Women', 'Unisex'];
 const TYPES: FragranceType[] = ['EDP', 'EDT', 'Extrait'];
@@ -23,14 +23,22 @@ interface ShopPageProps {
 export default function ShopPage({ params }: ShopPageProps) {
   const categorySlug = params?.category;
 
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<string>('');
   const [selectedGender, setSelectedGender] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [sort, setSort] = useState<ProductSortOption>('newest');
   const [showFilters, setShowFilters] = useState(false);
 
+  useEffect(() => {
+    setAllProducts(getStoredProducts());
+    const handleUpdate = () => setAllProducts(getStoredProducts());
+    window.addEventListener('lillyum_products_updated', handleUpdate);
+    return () => window.removeEventListener('lillyum_products_updated', handleUpdate);
+  }, []);
+
   const filtered = useMemo(() => {
-    let products = SAMPLE_PRODUCTS.filter((p) => p.status === 'active');
+    let products = allProducts.filter((p) => p.status === 'active');
 
     // Category filter
     if (categorySlug) {
@@ -60,7 +68,7 @@ export default function ShopPage({ params }: ShopPageProps) {
     });
 
     return products;
-  }, [categorySlug, selectedBrand, selectedGender, selectedType, sort]);
+  }, [allProducts, categorySlug, selectedBrand, selectedGender, selectedType, sort]);
 
   const cat = CATEGORIES.find((c) => c.slug === categorySlug);
   const pageTitle = cat?.name ?? 'All Fragrances';

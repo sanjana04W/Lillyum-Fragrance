@@ -5,12 +5,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, ChevronRight, ShoppingCart, Package, Shield, Truck } from 'lucide-react';
-import { SAMPLE_PRODUCTS } from '@/data/products';
+import { getStoredProducts } from '@/data/products';
 import { useCartStore } from '@/store/cartStore';
 import { trackViewContent, trackAddToCart } from '@/services/analyticsService';
 import { formatPrice, getDiscountPercentage, getWhatsAppLink } from '@/lib/utils';
 import { LOW_STOCK_THRESHOLD } from '@/lib/constants';
-import { ProductVariant } from '@/types';
+import { Product, ProductVariant } from '@/types';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import ProductCard from '@/components/products/ProductCard';
@@ -21,7 +21,18 @@ interface Props {
 }
 
 export default function ProductDetailPage({ params }: Props) {
-  const product = SAMPLE_PRODUCTS.find((p) => p.slug === params.slug);
+  const [product, setProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    const load = () => {
+      const found = getStoredProducts().find((p) => p.slug === params.slug) ?? null;
+      setProduct(found);
+    };
+    load();
+    window.addEventListener('lillyum_products_updated', load);
+    return () => window.removeEventListener('lillyum_products_updated', load);
+  }, [params.slug]);
+
   if (!product) notFound();
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(product.variants[0]);

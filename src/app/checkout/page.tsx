@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -97,13 +97,13 @@ export default function CheckoutPage() {
   }, [user, setValue]);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || placingOrder) return;
     if (items.length === 0) {
       router.push('/cart');
     } else {
       trackInitiateCheckout({ value: subtotal, numItems: items.length });
     }
-  }, [mounted, items.length, router, subtotal]);
+  }, [mounted, items.length, placingOrder, router, subtotal]);
 
   // Scroll to verification box when opened
   useEffect(() => {
@@ -152,6 +152,9 @@ export default function CheckoutPage() {
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setVerificationCode(code);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('lillyum_pending_otp', code);
+      }
       setPendingFormData(data);
       const orderId = generateOrderId();
       const orderItems = items.map((item) => ({
@@ -187,6 +190,9 @@ export default function CheckoutPage() {
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setVerificationCode(code);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('lillyum_pending_otp', code);
+      }
       setEnteredCode('');
       const orderId = generateOrderId();
       const orderItems = items.map((item) => ({
@@ -218,7 +224,11 @@ export default function CheckoutPage() {
   // Step 2: verify code and place order
   const handleVerifyAndPlace = async () => {
     if (!pendingFormData) return;
-    if (enteredCode.trim() !== verificationCode) {
+    const cleanEntered = enteredCode.replace(/\D/g, '').trim();
+    const storedOtp = typeof window !== 'undefined' ? (sessionStorage.getItem('lillyum_pending_otp') || '') : '';
+    const cleanActual = (verificationCode || storedOtp).replace(/\D/g, '').trim();
+
+    if (!cleanEntered || cleanEntered !== cleanActual) {
       toast.error('Incorrect verification code. Please check your email and try again.');
       return;
     }
@@ -252,7 +262,7 @@ export default function CheckoutPage() {
         items: orderItems, subtotal, deliveryFee, total,
         status: 'Pending', paymentMethod: 'COD', paymentStatus: 'Pending Collection',
         paymentGatewayReference: null, transactionId: null,
-        verificationCode,
+        verificationCode: verificationCode || (typeof window !== 'undefined' ? (sessionStorage.getItem('lillyum_pending_otp') || '') : ''),
         isVerified,
         internalNotes: note,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
@@ -260,18 +270,24 @@ export default function CheckoutPage() {
       const firestoreId = await createOrder(order);
       trackPurchase({ orderId, value: total, numItems: items.length });
       sendAdminOrderNotification({ ...order, id: firestoreId } as Order).catch(console.error);
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('lillyum_pending_otp');
+      }
       clearCart();
+
       const params = new URLSearchParams({
         orderId, total: String(total),
         email: pendingFormData.email, name: pendingFormData.name,
         district: pendingFormData.district, address: pendingFormData.address,
         city: pendingFormData.city, phone: pendingFormData.phone,
       });
-      router.push(`/order-confirmation?${params.toString()}`);
+
+      // Navigate reliably to order confirmation page
+      window.location.href = `/order-confirmation?${params.toString()}`;
     } catch (err) {
       console.error(err);
       toast.error('Failed to place order. Please try again or contact us via WhatsApp.');
-    } finally {
       setPlacingOrder(false);
     }
   };
