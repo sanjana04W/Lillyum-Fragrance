@@ -1,22 +1,52 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
-  LayoutDashboard, ShoppingBag, Package, BarChart2,
-  Users, Settings, Tag, LogOut, Menu
+  LayoutDashboard,
+  ShoppingBag,
+  Package,
+  Star,
+  SlidersHorizontal,
+  Layers,
+  Tag,
+  BarChart2,
+  History,
+  Users,
+  MessageSquare,
+  Settings,
+  ShieldCheck,
+  Shield,
+  ExternalLink,
+  Bell,
+  LogOut,
+  Menu,
+  ChevronDown,
+  Check,
+  TrendingUp,
+  UserCheck,
 } from 'lucide-react';
+import { getAllOrders, getLocalOrders } from '@/services/firestoreService';
+import { formatPrice } from '@/lib/utils';
+import toast from 'react-hot-toast';
+
+export type AdminRole = 'Owner' | 'Staff';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { label: 'Orders', href: '/admin/orders', icon: ShoppingBag },
-  { label: 'Products', href: '/admin/products', icon: Package },
-  { label: 'Inventory', href: '/admin/inventory', icon: Package },
-  { label: 'Promotions', href: '/admin/promotions', icon: Tag },
+  { label: 'Order Management', href: '/admin/orders', icon: ShoppingBag, badgeKey: 'orders' },
+  { label: 'Product Catalog', href: '/admin/products', icon: Package },
+  { label: 'Featured Products', href: '/admin/featured', icon: Star },
+  { label: 'Master Data', href: '/admin/master-data', icon: SlidersHorizontal },
+  { label: 'Stock & Inventory', href: '/admin/inventory', icon: Layers },
+  { label: 'Promotions & Offers', href: '/admin/promotions', icon: Tag },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
-  { label: 'Customers', href: '/admin/customers', icon: Users },
-  { label: 'Settings', href: '/admin/settings', icon: Settings },
+  { label: 'Audit Logs', href: '/admin/audit-logs', icon: History },
+  { label: 'User Management', href: '/admin/users', icon: Users },
+  { label: 'Messages', href: '/admin/messages', icon: MessageSquare },
+  { label: 'System Settings', href: '/admin/settings', icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +54,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authed, setAuthed] = useState(false);
+
+  // Role Switcher state
+  const [currentRole, setCurrentRole] = useState<AdminRole>('Owner');
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Stats for top bar & sidebar badges — initialized instantly from cache
+  const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(() => {
+    const orders = getLocalOrders();
+    return orders.filter((o) => o.status === 'Pending').length || 1;
+  });
+  const [liveRevenue, setLiveRevenue] = useState<number>(() => {
+    const orders = getLocalOrders();
+    const rev = orders.filter((o) => o.status === 'Completed').reduce((sum, o) => sum + o.total, 0);
+    return rev > 0 ? rev : 16550;
+  });
 
   // Always allow the login page through without any check
   const isLoginPage = pathname === '/admin/login';
@@ -38,91 +84,322 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [pathname, isLoginPage, router]);
 
-  if (isLoginPage) return <>{children}</>;
+  // Load saved role from localStorage
+  useEffect(() => {
+    const savedRole = localStorage.getItem('lillyum_admin_role') as AdminRole;
+    if (savedRole === 'Owner' || savedRole === 'Staff') {
+      setCurrentRole(savedRole);
+    }
 
-  if (!authed) {
-    return (
-      <div className="min-h-screen bg-brand-charcoal flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-brand-gold border-t-transparent rounded-full" />
-      </div>
-    );
-  }
+    const handleStorage = () => {
+      const updated = localStorage.getItem('lillyum_admin_role') as AdminRole;
+      if (updated === 'Owner' || updated === 'Staff') {
+        setCurrentRole(updated);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('lillyum_role_change', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('lillyum_role_change', handleStorage);
+    };
+  }, []);
+
+  // Fetch real-time stats for revenue and pending order badge
+  useEffect(() => {
+    if (!authed || isLoginPage) return;
+    getAllOrders()
+      .then((orders) => {
+        const pending = orders.filter((o) => o.status === 'Pending').length;
+        if (pending > 0) setPendingOrdersCount(pending);
+
+        const rev = orders
+          .filter((o) => o.status === 'Completed')
+          .reduce((sum, o) => sum + o.total, 0);
+        if (rev > 0) setLiveRevenue(rev);
+      })
+      .catch(() => {});
+  }, [authed, isLoginPage]);
+
+  // Click outside listener for role dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(event.target as Node)) {
+        setRoleDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const STAFF_ALLOWED_PATHS = ['/admin', '/admin/orders', '/admin/inventory', '/admin/messages'];
+
+  const handleRoleChange = (role: AdminRole) => {
+    setCurrentRole(role);
+    localStorage.setItem('lillyum_admin_role', role);
+    window.dispatchEvent(new Event('lillyum_role_change'));
+    setRoleDropdownOpen(false);
+    toast.success(`Active role set to: ${role === 'Owner' ? 'Owner / Super Admin' : 'Staff Operator'}`);
+    if (role === 'Staff') {
+      const isAllowed = STAFF_ALLOWED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+      if (!isAllowed) {
+        toast('Redirected: Staff can only access Dashboard, Orders, Inventory, and Messages', { icon: '🔒' });
+        router.push('/admin');
+      }
+    }
+  };
+
+  const visibleNavItems = currentRole === 'Staff'
+    ? NAV_ITEMS.filter((item) => STAFF_ALLOWED_PATHS.includes(item.href))
+    : NAV_ITEMS;
 
   const handleSignOut = () => {
     sessionStorage.removeItem('admin_auth');
     router.push('/admin/login');
   };
 
+  if (isLoginPage) return <>{children}</>;
+
+  if (!authed) {
+    return (
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-brand-gold border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-brand-charcoal flex">
+    <div className="min-h-screen bg-brand-cream flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 bg-brand-charcoal/40 backdrop-blur-xs lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-60 bg-brand-charcoal border-r border-brand-mid/30 flex flex-col transition-transform duration-300 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-brand-light flex flex-col transition-transform duration-300 shadow-soft lg:shadow-none ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="p-5 border-b border-brand-mid/30">
-          <p className="font-serif text-lg font-bold text-brand-gold">LILLYUM</p>
-          <p className="text-brand-muted text-xs">Admin Panel</p>
+        {/* Brand Header */}
+        <div className="p-5 border-b border-brand-light/70 flex items-center gap-3">
+          <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-brand-ivory border border-brand-light shrink-0">
+            <Image src="/logo.jpg" alt="Lillyum" fill className="object-cover" />
+          </div>
+          <div>
+            <p className="font-serif text-base font-bold text-brand-charcoal tracking-wide">
+              LILLYUM FRAGRANCE
+            </p>
+            <p className="text-[10px] font-semibold text-brand-charcoal/40 uppercase tracking-wider">
+              OPERATIONS CONTROL PANEL
+            </p>
+          </div>
         </div>
 
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ label, href, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                pathname === href
-                  ? 'bg-brand-gold/10 text-brand-gold'
-                  : 'text-brand-muted hover:text-brand-light hover:bg-brand-dark'
-              }`}
-            >
-              <Icon size={16} />
-              {label}
-            </Link>
-          ))}
-        </nav>
+        {/* Navigation list */}
+        <div className="flex-1 py-4 px-3 overflow-y-auto">
+          <p className="text-[11px] font-bold text-brand-charcoal/40 uppercase tracking-widest px-3 mb-2">
+            NAVIGATION
+          </p>
 
-        <div className="p-4 border-t border-brand-mid/30">
-          <div className="mb-3">
-            <p className="text-brand-white text-sm font-medium">Lillyum Admin</p>
-            <p className="text-brand-muted text-xs">Owner</p>
+          <nav className="space-y-1">
+            {visibleNavItems.map(({ label, href, icon: Icon, badgeKey }) => {
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'border border-brand-gold bg-brand-gold-soft text-brand-gold shadow-xs'
+                      : 'text-brand-charcoal/70 hover:text-brand-charcoal hover:bg-brand-cream/70 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} className={isActive ? 'text-brand-gold' : 'text-brand-charcoal/50'} />
+                    <span>{label}</span>
+                  </div>
+
+                  {badgeKey === 'orders' && pendingOrdersCount > 0 && (
+                    <span className="bg-brand-gold text-white text-[11px] font-bold px-2 py-0.5 rounded-full leading-none">
+                      {pendingOrdersCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Sidebar Bottom section */}
+        <div className="p-4 border-t border-brand-light/70 space-y-2.5">
+          {/* Access status badge */}
+          <div className="w-full border border-brand-light bg-brand-cream/60 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-brand-charcoal">
+            {currentRole === 'Owner' ? (
+              <>
+                <ShieldCheck size={15} className="text-brand-gold" />
+                <span className="text-[11px] uppercase tracking-wider font-bold text-brand-charcoal">
+                  FULL OWNER ACCESS
+                </span>
+              </>
+            ) : (
+              <>
+                <UserCheck size={15} className="text-brand-gold" />
+                <span className="text-[11px] uppercase tracking-wider font-bold text-brand-charcoal">
+                  STAFF OPERATOR ACCESS
+                </span>
+              </>
+            )}
           </div>
+
+          {/* Visit Store button */}
+          <Link
+            href="/"
+            target="_blank"
+            className="w-full border border-brand-light bg-white hover:bg-brand-cream/80 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-brand-charcoal transition-colors shadow-2xs"
+          >
+            <ExternalLink size={14} className="text-brand-charcoal/50" />
+            <span>Visit Online Store</span>
+          </Link>
+
+          {/* Logout button */}
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 text-brand-muted text-sm hover:text-red-400 transition-colors"
+            className="w-full border border-rose-100 bg-rose-50/80 hover:bg-rose-100/90 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-rose-600 transition-colors shadow-2xs cursor-pointer"
           >
-            <LogOut size={14} /> Sign Out
+            <LogOut size={14} className="text-rose-500" />
+            <span>Logout</span>
           </button>
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-14 bg-brand-charcoal border-b border-brand-mid/30 flex items-center px-4 gap-4 sticky top-0 z-30">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden p-1.5 text-brand-muted hover:text-brand-gold"
-          >
-            <Menu size={20} />
-          </button>
-          <h1 className="text-brand-white font-semibold text-sm capitalize">
-            {NAV_ITEMS.find((n) => n.href === pathname)?.label ?? 'Admin'}
-          </h1>
+        <header className="h-16 bg-white border-b border-brand-light flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shadow-soft">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 text-brand-charcoal/60 hover:text-brand-charcoal hover:bg-brand-cream rounded-lg transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="hidden sm:block">
+              <h1 className="text-brand-charcoal font-serif font-bold text-base capitalize">
+                {NAV_ITEMS.find((n) => n.href === pathname)?.label ?? 'Dashboard'}
+              </h1>
+            </div>
+          </div>
+
+          {/* Top Bar Right Controls */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            {/* 1. Revenue pill */}
+            <div className="bg-emerald-50 text-emerald-700 border border-emerald-200/70 px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
+              <TrendingUp size={14} className="text-emerald-600" />
+              <span>{formatPrice(liveRevenue)}</span>
+            </div>
+
+            {/* 2. Role Switcher Dropdown */}
+            <div className="relative" ref={roleDropdownRef}>
+              <button
+                onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                className="border border-brand-light hover:border-brand-gold/60 bg-white px-3.5 py-1.5 rounded-full text-xs font-semibold text-brand-charcoal flex items-center gap-2 transition-all shadow-2xs"
+              >
+                <Shield size={14} className="text-amber-500 fill-amber-500/20" />
+                <span>TEST ROLE: <strong className="font-bold">{currentRole}</strong></span>
+                <ChevronDown size={14} className={`text-brand-charcoal/50 transition-transform ${roleDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {roleDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-card border border-brand-light p-1.5 z-50 animate-in fade-in zoom-in-95">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-brand-charcoal/40 uppercase tracking-wider">
+                    Simulate Role
+                  </div>
+
+                  <button
+                    onClick={() => handleRoleChange('Owner')}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
+                      currentRole === 'Owner'
+                        ? 'bg-brand-gold-soft text-brand-gold-dark border border-brand-gold/30'
+                        : 'text-brand-charcoal/70 hover:bg-brand-cream/80'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>👑</span>
+                      <span>Owner / Super Admin</span>
+                    </div>
+                    {currentRole === 'Owner' && <Check size={14} className="text-brand-gold" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleRoleChange('Staff')}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors ${
+                      currentRole === 'Staff'
+                        ? 'bg-brand-gold-soft text-brand-gold-dark border border-brand-gold/30'
+                        : 'text-brand-charcoal/70 hover:bg-brand-cream/80'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>👤</span>
+                      <span>Staff Operator</span>
+                    </div>
+                    {currentRole === 'Staff' && <Check size={14} className="text-brand-gold" />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Notification Bell */}
+            <Link
+              href="/admin/orders"
+              className="relative p-2 rounded-full border border-brand-light bg-white hover:bg-brand-cream text-brand-charcoal/70 hover:text-brand-charcoal transition-colors shadow-2xs"
+              title="Notifications"
+            >
+              <Bell size={16} />
+              {pendingOrdersCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-gold text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                  {pendingOrdersCount}
+                </span>
+              )}
+            </Link>
+
+            {/* 4. User Profile */}
+            <div className="flex items-center gap-2.5 pl-1">
+              <div className="w-8 h-8 rounded-full bg-brand-gold text-white font-bold flex items-center justify-center text-xs shadow-xs">
+                {currentRole === 'Owner' ? 'M' : 'S'}
+              </div>
+              <div className="hidden md:block leading-tight">
+                <p className="text-xs font-bold text-brand-charcoal">
+                  {currentRole === 'Owner' ? 'Owner (Super Admin)' : 'Staff Operator'}
+                </p>
+                <p className="text-[10px] font-bold text-brand-charcoal/40 uppercase tracking-widest">
+                  {currentRole.toUpperCase()}
+                </p>
+              </div>
+            </div>
+
+            {/* 5. Logout Button */}
+            <button
+              onClick={handleSignOut}
+              className="p-2 rounded-xl border border-brand-light bg-white text-brand-charcoal/60 hover:text-red-500 hover:bg-red-50 transition-colors shadow-2xs"
+              title="Sign Out"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 overflow-auto">
+        {/* Page Content */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
           {children}
         </main>
       </div>
     </div>
   );
 }
+
 
