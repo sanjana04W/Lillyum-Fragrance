@@ -1,16 +1,12 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { registerCustomer, loginCustomerWithGoogle } from '@/services/customerAuthService';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const googleProvider = new GoogleAuthProvider();
 
 const passwordRules = [
   { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
@@ -18,8 +14,11 @@ const passwordRules = [
   { label: 'One number', test: (p: string) => /[0-9]/.test(p) },
 ];
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
+
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -36,24 +35,16 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
-      await updateProfile(cred.user, { displayName: form.name });
-      await setDoc(doc(db, 'users', cred.user.uid), {
-        name: form.name,
-        email: form.email,
-        createdAt: new Date().toISOString(),
-      });
-      toast.success('Account created! Welcome to Lillyum.', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
-      router.push('/');
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === 'auth/email-already-in-use') {
-        toast.error('This email is already registered. Try signing in.');
-      } else if (code === 'auth/weak-password') {
-        toast.error('Password is too weak.');
+      const res = await registerCustomer(form.name, form.email, form.password);
+      if (res.success) {
+        toast.success('Account created! Welcome to Lillyum.', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
+        const targetUrl = redirectUrl && redirectUrl !== '/' ? `/profile?continue=${encodeURIComponent(redirectUrl)}` : '/profile';
+        router.push(targetUrl);
       } else {
-        toast.error('Account creation failed. Please try again.');
+        toast.error(res.error || 'Account creation failed. Please try again.');
       }
+    } catch {
+      toast.error('Account creation failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -63,20 +54,21 @@ export default function RegisterPage() {
     if (!agreed) { toast.error('Please accept the Terms & Privacy Policy first.'); return; }
     setGoogleLoading(true);
     try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      await setDoc(doc(db, 'users', cred.user.uid), {
-        name: cred.user.displayName,
-        email: cred.user.email,
-        createdAt: new Date().toISOString(),
-      }, { merge: true });
-      toast.success('Welcome to Lillyum!', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
-      router.push('/');
+      const res = await loginCustomerWithGoogle();
+      if (res.success) {
+        toast.success('Welcome to Lillyum!', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
+        router.push(redirectUrl);
+      } else {
+        toast.error(res.error || 'Google sign-up failed.');
+      }
     } catch {
       toast.error('Google sign-up failed. Please try again.');
     } finally {
       setGoogleLoading(false);
     }
   };
+
+  const loginLink = redirectUrl !== '/' ? `/login?redirect=${encodeURIComponent(redirectUrl)}` : '/login';
 
   return (
     <div className="min-h-screen flex">
@@ -133,7 +125,7 @@ export default function RegisterPage() {
               <h1 className="font-serif text-3xl font-bold text-brand-charcoal mb-1">Create Account</h1>
               <p className="text-brand-mid text-sm">
                 Already have an account?{' '}
-                <Link href="/login" className="text-brand-gold font-semibold hover:text-brand-gold-dark transition-colors underline underline-offset-2">Sign in</Link>
+                <Link href={loginLink} className="text-brand-gold font-semibold hover:text-brand-gold-dark transition-colors underline underline-offset-2">Sign in</Link>
               </p>
             </div>
 
@@ -246,5 +238,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-brand-cream flex items-center justify-center"><Loader2 size={24} className="animate-spin text-brand-gold" /></div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }
