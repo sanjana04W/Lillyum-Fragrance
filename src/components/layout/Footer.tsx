@@ -46,9 +46,10 @@ export default function Footer() {
           <h3 className="text-xs font-bold uppercase tracking-widest text-brand-gold mb-4">Shop</h3>
           <ul className="space-y-2.5">
             {[
-              { label: "Men's Fragrances", href: '/shop/men' },
-              { label: "Women's Fragrances", href: '/shop/women' },
+              { label: 'Women', href: '/shop/women' },
+              { label: 'Men', href: '/shop/men' },
               { label: 'Unisex', href: '/shop/unisex' },
+              { label: 'Gift Sets', href: '/shop/gift-sets' },
               { label: 'New Arrivals', href: '/shop/new-arrivals' },
               { label: 'Best Sellers', href: '/shop/best-sellers' },
               { label: 'Offers & Sale', href: '/offers' },
