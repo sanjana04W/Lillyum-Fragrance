@@ -4,18 +4,18 @@ import { ArrowRight } from 'lucide-react';
 
 const CATEGORIES = [
   {
-    label: "Men's",
-    href: '/shop/men',
-    image: '/images/0771edee4246abc5f034c3be2e739e74.jpg',
-    sub: 'Bold & Powerful',
-    emoji: '♂',
-  },
-  {
-    label: "Women's",
+    label: 'Women',
     href: '/shop/women',
     image: '/images/1dc9d3caa49629dcf553b591e815fcb9.jpg',
     sub: 'Elegant & Floral',
     emoji: '♀',
+  },
+  {
+    label: 'Men',
+    href: '/shop/men',
+    image: '/images/0771edee4246abc5f034c3be2e739e74.jpg',
+    sub: 'Bold & Powerful',
+    emoji: '♂',
   },
   {
     label: 'Unisex',
@@ -25,11 +25,11 @@ const CATEGORIES = [
     emoji: '✦',
   },
   {
-    label: 'EDP',
-    href: '/shop/edp',
-    image: '/images/29d72228b8254853126e1f8c0074c08d.jpg',
-    sub: 'Long-lasting',
-    emoji: '💎',
+    label: 'Gift Sets',
+    href: '/shop/gift-sets',
+    image: '/images/4ed73906dc55b3491b3fc80daba6b528.jpg',
+    sub: 'Perfect Presents',
+    emoji: '🎁',
   },
   {
     label: 'New Arrivals',
