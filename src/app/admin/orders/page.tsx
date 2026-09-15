@@ -88,9 +88,16 @@ export default function AdminOrdersPage() {
                 {filtered.map((order) => (
                   <tr key={order.id} className="hover:bg-brand-dark/50 transition-colors">
                     <td className="px-4 py-3">
-                      <Link href={`/admin/orders/${order.id}`} className="text-brand-gold hover:underline font-mono text-xs">
+                      <Link href={`/admin/orders/${order.id}`} className="text-brand-gold hover:underline font-mono text-xs block">
                         {order.orderId}
                       </Link>
+                      {order.verificationCode && (
+                        <span className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded mt-0.5 font-mono ${
+                          order.isVerified ? 'bg-emerald-500/20 text-emerald-400' : 'bg-brand-gold/15 text-brand-gold-lighter'
+                        }`}>
+                          {order.isVerified ? '✓ Verified' : `Code: ${order.verificationCode}`}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-brand-white text-xs">{order.customer.name}</p>

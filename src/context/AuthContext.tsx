@@ -3,16 +3,20 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
   User,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { AdminUser } from '@/types';
+import {
+  CustomerUser,
+  getLocalCustomer,
+  loginCustomer,
+  signOutCustomer,
+} from '@/services/customerAuthService';
 
 interface AuthContextValue {
-  user: User | null;
+  user: CustomerUser | User | null;
   adminUser: AdminUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -24,15 +28,20 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<CustomerUser | User | null>(null);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check local customer account first so UI renders immediately
+    const initialLocal = getLocalCustomer();
+    if (initialLocal) {
+      setUser(initialLocal);
+    }
+
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
       if (firebaseUser) {
-        // Fetch role from Firestore users collection
+        setUser(firebaseUser);
         try {
           const d = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (d.exists()) {
@@ -44,19 +53,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setAdminUser(null);
         }
       } else {
+        const local = getLocalCustomer();
+        setUser(local);
         setAdminUser(null);
       }
       setLoading(false);
     });
-    return unsub;
+
+    const handleCustomerAuthChange = () => {
+      const current = getLocalCustomer();
+      setUser(current);
+    };
+    window.addEventListener('lillyum-auth-change', handleCustomerAuthChange);
+
+    return () => {
+      unsub();
+      window.removeEventListener('lillyum-auth-change', handleCustomerAuthChange);
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const res = await loginCustomer(email, password);
+    if (!res.success) {
+      throw new Error(res.error || 'Invalid credentials');
+    }
   };
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
+    await signOutCustomer();
+    setUser(null);
     setAdminUser(null);
   };
 
