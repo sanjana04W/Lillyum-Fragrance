@@ -129,7 +129,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     isFeatured: true,
     isNewArrival: true,
     isBestSeller: false,
-    categories: ['unisex', 'edp', 'new-arrivals'],
+    categories: ['unisex', 'edp', 'new-arrivals', 'gift-sets'],
     authenticityInfo: '100% authentic Lattafa product.',
     orderCount: 22,
     createdAt: '2024-05-01T00:00:00Z',
@@ -385,7 +385,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     isFeatured: true,
     isNewArrival: false,
     isBestSeller: false,
-    categories: ['unisex', 'edp'],
+    categories: ['unisex', 'edp', 'gift-sets'],
     authenticityInfo: '100% authentic Lattafa product.',
     orderCount: 9,
     createdAt: '2024-03-20T00:00:00Z',
@@ -609,7 +609,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     isFeatured: true,
     isNewArrival: false,
     isBestSeller: false,
-    categories: ['unisex', 'edp'],
+    categories: ['unisex', 'edp', 'gift-sets'],
     authenticityInfo: '100% authentic Lattafa product.',
     orderCount: 15,
     createdAt: '2024-03-05T00:00:00Z',
@@ -801,7 +801,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     isFeatured: true,
     isNewArrival: true,
     isBestSeller: false,
-    categories: ['unisex', 'new-arrivals', 'extrait'],
+    categories: ['unisex', 'new-arrivals', 'extrait', 'gift-sets'],
     authenticityInfo: '100% authentic Lattafa product.',
     orderCount: 5,
     createdAt: '2024-06-01T00:00:00Z',
@@ -906,9 +906,10 @@ export const SAMPLE_PRODUCTS: Product[] = [
 ];
 
 export const CATEGORIES = [
-  { id: 'men', name: "Men's Fragrances", slug: 'men', parent: 'fragrances' },
-  { id: 'women', name: "Women's Fragrances", slug: 'women', parent: 'fragrances' },
-  { id: 'unisex', name: 'Unisex Fragrances', slug: 'unisex', parent: 'fragrances' },
+  { id: 'women', name: 'Women', slug: 'women', parent: 'fragrances' },
+  { id: 'men', name: 'Men', slug: 'men', parent: 'fragrances' },
+  { id: 'unisex', name: 'Unisex', slug: 'unisex', parent: 'fragrances' },
+  { id: 'gift-sets', name: 'Gift Sets', slug: 'gift-sets', parent: 'fragrances' },
   { id: 'edp', name: 'Eau de Parfum (EDP)', slug: 'edp', parent: 'fragrances' },
   { id: 'edt', name: 'Eau de Toilette (EDT)', slug: 'edt', parent: 'fragrances' },
   { id: 'extrait', name: 'Extrait de Parfum', slug: 'extrait', parent: 'fragrances' },
@@ -919,40 +920,97 @@ export const CATEGORIES = [
 
 export const BRANDS = ['Armaf', 'Lattafa', 'Rasasi', 'Ajmal', 'Al-Rehab'];
 
+// ─── Local Storage & In-Memory Sync for Products ──────────────────
+const LOCAL_PRODUCTS_KEY = 'lillyum_products';
+
+export function getStoredProducts(): Product[] {
+  if (typeof window === 'undefined') return SAMPLE_PRODUCTS;
+  try {
+    const raw = localStorage.getItem(LOCAL_PRODUCTS_KEY);
+    if (!raw) {
+      localStorage.setItem(LOCAL_PRODUCTS_KEY, JSON.stringify(SAMPLE_PRODUCTS));
+      return SAMPLE_PRODUCTS;
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+    localStorage.setItem(LOCAL_PRODUCTS_KEY, JSON.stringify(SAMPLE_PRODUCTS));
+    return SAMPLE_PRODUCTS;
+  } catch {
+    return SAMPLE_PRODUCTS;
+  }
+}
+
+export function saveStoredProducts(products: Product[]): void {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(LOCAL_PRODUCTS_KEY, JSON.stringify(products));
+      window.dispatchEvent(new Event('lillyum_products_updated'));
+    } catch (e) {
+      console.error('Failed to save products to localStorage:', e);
+    }
+  }
+  // Sync in-memory SAMPLE_PRODUCTS array
+  SAMPLE_PRODUCTS.length = 0;
+  SAMPLE_PRODUCTS.push(...products);
+}
+
+export function saveProduct(updatedProduct: Product): void {
+  const all = getStoredProducts();
+  const idx = all.findIndex((p) => p.id === updatedProduct.id || p.slug === updatedProduct.slug);
+  if (idx >= 0) {
+    all[idx] = { ...all[idx], ...updatedProduct };
+  } else {
+    all.unshift(updatedProduct);
+  }
+  saveStoredProducts(all);
+}
+
+export function deleteProduct(id: string): void {
+  const all = getStoredProducts();
+  const filtered = all.filter((p) => p.id !== id);
+  saveStoredProducts(filtered);
+}
+
 // ─── Helper query functions ───────────────────────────────────────
 export function getFeaturedProducts(limit = 8) {
-  return SAMPLE_PRODUCTS
+  return getStoredProducts()
     .filter((p) => p.isFeatured && p.status === 'active')
     .slice(0, limit);
 }
 
 export function getBestSellers(limit = 4) {
-  return SAMPLE_PRODUCTS
+  return getStoredProducts()
     .filter((p) => p.isBestSeller && p.status === 'active')
     .sort((a, b) => (b.orderCount ?? 0) - (a.orderCount ?? 0))
     .slice(0, limit);
 }
 
 export function getNewArrivals(limit = 4) {
-  return SAMPLE_PRODUCTS
+  return getStoredProducts()
     .filter((p) => p.isNewArrival && p.status === 'active')
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, limit);
 }
 
 export function getProductBySlug(slug: string) {
-  return SAMPLE_PRODUCTS.find((p) => p.slug === slug) ?? null;
+  return getStoredProducts().find((p) => p.slug === slug) ?? null;
+}
+
+export function getProductById(id: string) {
+  return getStoredProducts().find((p) => p.id === id) ?? null;
 }
 
 export function getProductsByCategory(categorySlug: string, limit?: number) {
-  const filtered = SAMPLE_PRODUCTS.filter(
+  const filtered = getStoredProducts().filter(
     (p) => p.status === 'active' && p.categories.includes(categorySlug)
   );
   return limit ? filtered.slice(0, limit) : filtered;
 }
 
 export function getRelatedProducts(product: Product, limit = 4) {
-  return SAMPLE_PRODUCTS
+  return getStoredProducts()
     .filter(
       (p) =>
         p.id !== product.id &&
@@ -963,7 +1021,7 @@ export function getRelatedProducts(product: Product, limit = 4) {
 }
 
 export function getSaleProducts() {
-  return SAMPLE_PRODUCTS.filter(
+  return getStoredProducts().filter(
     (p) => p.status === 'active' && p.variants.some((v) => !!v.salePrice)
   );
 }
