@@ -15,7 +15,7 @@ import { generateOrderId, formatPrice } from '@/lib/utils';
 import { getDeliveryFee as getZoneFee, ALL_DISTRICTS } from '@/lib/constants';
 import { Order } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { LogIn, CheckCircle2, ShieldCheck, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
+import { LogIn, CheckCircle2, ShieldCheck, RefreshCw, Loader2 } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import toast from 'react-hot-toast';
@@ -48,6 +48,7 @@ export default function CheckoutPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const verificationRef = useRef<HTMLDivElement>(null);
 
   const subtotal = getSubtotal();
   const deliveryFee = getZoneFee(district);
@@ -103,6 +104,15 @@ export default function CheckoutPage() {
       trackInitiateCheckout({ value: subtotal, numItems: items.length });
     }
   }, [mounted, items.length, router, subtotal]);
+
+  // Scroll to verification box when opened
+  useEffect(() => {
+    if (verificationStep && verificationRef.current) {
+      setTimeout(() => {
+        verificationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [verificationStep]);
 
   const startCooldown = (seconds: number) => {
     setResendCooldown(seconds);
@@ -273,8 +283,8 @@ export default function CheckoutPage() {
         <p className="text-brand-mid text-sm mb-8">Cash on Delivery — pay when your order arrives</p>
 
         <form onSubmit={handleSubmit(handleConfirmOrder)}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left column */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Left column: Contact, Delivery Address, Payment */}
             <div className="lg:col-span-2 space-y-6">
 
               {/* Contact Information */}
@@ -333,94 +343,13 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* ── Email Verification Box (Matches Reference Images 3 & 4) ── */}
-              {verificationStep && (
-                <div className="bg-brand-white rounded-3xl p-6 sm:p-8 border-2 border-brand-gold/40 shadow-gold animate-fade-in">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-brand-gold-soft border border-brand-gold/30 flex items-center justify-center shrink-0">
-                      <ShieldCheck size={20} className="text-brand-gold" />
-                    </div>
-                    <div>
-                      <h2 className="font-serif text-lg font-bold text-brand-charcoal">Email Verification</h2>
-                      <p className="text-brand-mid text-xs">Confirm your email to complete the order</p>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-brand-dark mb-4">
-                    We&apos;ve sent a 6-digit verification code to{' '}
-                    <strong className="text-brand-charcoal font-bold">{pendingFormData?.email}</strong>.
-                    Please enter it below to confirm your order.
-                  </p>
-
-                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5">
-                    <CheckCircle2 size={17} className="text-emerald-600 shrink-0" />
-                    <p className="text-sm text-emerald-700 font-medium">
-                      Verification code sent to {pendingFormData?.email}!
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={enteredCode}
-                      onChange={(e) => setEnteredCode(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Enter 6-digit code"
-                      className="flex-1 bg-brand-cream border-2 border-brand-gold/40 focus:border-brand-gold rounded-xl px-4 py-3.5 text-brand-charcoal text-xl font-mono tracking-[0.3em] text-center focus:outline-none shadow-inner"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleVerifyAndPlace}
-                      disabled={enteredCode.length !== 6 || placingOrder}
-                      className="sm:w-auto px-6 py-3.5 bg-brand-charcoal hover:bg-black text-brand-white disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shrink-0 shadow-card"
-                    >
-                      {placingOrder ? (
-                        <><Loader2 size={16} className="animate-spin" /> Placing Order...</>
-                      ) : (
-                        <><CheckCircle2 size={16} className="text-brand-gold" /> Verify &amp; Confirm Order</>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs flex-wrap pt-1 text-brand-mid">
-                    <button
-                      type="button"
-                      onClick={() => { setVerificationStep(false); setEnteredCode(''); }}
-                      className="text-brand-gold hover:underline font-semibold"
-                    >
-                      Change Email or Details
-                    </button>
-                    <span>•</span>
-                    {resendCooldown > 0 ? (
-                      <span className="text-brand-mid">Resend in {resendCooldown}s</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleResend}
-                        disabled={sendingCode}
-                        className="text-brand-mid hover:text-brand-gold flex items-center gap-1 disabled:opacity-50 font-medium"
-                      >
-                        <RefreshCw size={11} /> Resend Code
-                      </button>
-                    )}
-                    <span>•</span>
-                    <button
-                      type="button"
-                      onClick={handleFallbackCompleteOrder}
-                      disabled={placingOrder}
-                      className="text-brand-mid hover:text-brand-charcoal underline"
-                    >
-                      Didn&apos;t get code? Complete Order
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Right column: Order Summary */}
-            <div className="lg:col-span-1">
-              <div className="bg-brand-white rounded-3xl p-6 border border-brand-light shadow-card sticky top-24">
+            {/* Right column: Order Summary + Email Verification Section Below It */}
+            <div className="lg:col-span-1 space-y-6">
+
+              {/* ── Order Summary Card ── */}
+              <div className="bg-brand-white rounded-3xl p-6 border border-brand-light shadow-card">
                 <h2 className="font-serif text-lg font-bold text-brand-charcoal mb-4">
                   Order Summary ({items.length})
                 </h2>
@@ -474,7 +403,7 @@ export default function CheckoutPage() {
                 ) : (
                   <div className="mt-5 bg-brand-gold-soft border border-brand-gold/40 rounded-2xl px-4 py-3 text-center">
                     <p className="text-brand-gold font-semibold text-xs flex items-center justify-center gap-1.5">
-                      <ShieldCheck size={16} /> Enter the 6-digit code to place order
+                      <ShieldCheck size={16} /> Enter the 6-digit code below to place order
                     </p>
                   </div>
                 )}
@@ -484,6 +413,96 @@ export default function CheckoutPage() {
                   <Link href="/policies/returns" className="text-brand-gold hover:underline">return policy</Link>
                 </p>
               </div>
+
+              {/* ── Email Verification Section (Appears Below Order Summary) ── */}
+              {verificationStep && (
+                <div
+                  ref={verificationRef}
+                  className="bg-brand-white rounded-3xl p-6 border-2 border-brand-gold/40 shadow-gold animate-fade-in space-y-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-brand-gold-soft border border-brand-gold/30 flex items-center justify-center shrink-0">
+                      <ShieldCheck size={20} className="text-brand-gold" />
+                    </div>
+                    <div>
+                      <h2 className="font-serif text-lg font-bold text-brand-charcoal leading-tight">Email Verification</h2>
+                      <p className="text-brand-mid text-xs">Confirm your email to complete the order</p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-brand-dark leading-relaxed">
+                    We&apos;ve sent a 6-digit verification code to{' '}
+                    <strong className="text-brand-charcoal font-bold">{pendingFormData?.email}</strong>.
+                    Please enter it below to confirm your order.
+                  </p>
+
+                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2.5">
+                    <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                    <p className="text-xs text-emerald-700 font-medium">
+                      Verification code sent to {pendingFormData?.email}!
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 pt-1">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={enteredCode}
+                      onChange={(e) => setEnteredCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter 6-digit code"
+                      className="w-full bg-brand-cream border-2 border-brand-gold/40 focus:border-brand-gold rounded-xl px-4 py-3 text-brand-charcoal text-lg font-mono tracking-[0.25em] text-center focus:outline-none shadow-inner"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyAndPlace}
+                      disabled={enteredCode.length !== 6 || placingOrder}
+                      className="w-full py-3.5 px-4 bg-brand-charcoal hover:bg-black text-brand-white disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-card"
+                    >
+                      {placingOrder ? (
+                        <><Loader2 size={15} className="animate-spin" /> Placing Order...</>
+                      ) : (
+                        <><CheckCircle2 size={15} className="text-brand-gold" /> Verify &amp; Confirm Order</>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-2 border-t border-brand-light/60 text-xs text-brand-mid">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => { setVerificationStep(false); setEnteredCode(''); }}
+                        className="text-brand-gold hover:underline font-semibold"
+                      >
+                        Change Email or Details
+                      </button>
+                      {resendCooldown > 0 ? (
+                        <span className="text-brand-mid font-medium">Resend in {resendCooldown}s</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleResend}
+                          disabled={sendingCode}
+                          className="text-brand-mid hover:text-brand-gold flex items-center gap-1 disabled:opacity-50 font-medium"
+                        >
+                          <RefreshCw size={11} /> Resend Code
+                        </button>
+                      )}
+                    </div>
+                    <div className="text-center pt-1">
+                      <button
+                        type="button"
+                        onClick={handleFallbackCompleteOrder}
+                        disabled={placingOrder}
+                        className="text-brand-mid hover:text-brand-charcoal underline text-[11px]"
+                      >
+                        Didn&apos;t get code? Complete Order
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         </form>

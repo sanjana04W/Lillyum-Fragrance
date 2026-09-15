@@ -63,9 +63,13 @@ export async function sendOrderConfirmation(order: Order, customCode?: string): 
 
     // Verification Code variables
     verification_code: vCode,
-    code: vCode,
+    otp_code: vCode,
     otp: vCode,
+    code: vCode,
     passcode: vCode,
+    otpCode: vCode,
+    OTP_CODE: vCode,
+    OTP: vCode,
 
     // Order Details
     order_id: order.orderId,
@@ -74,6 +78,10 @@ export async function sendOrderConfirmation(order: Order, customCode?: string): 
     subtotal: formatPrice(order.subtotal),
     delivery_fee: formatPrice(order.deliveryFee),
     total: formatPrice(order.total),
+    order_total: formatPrice(order.total),
+    ordertotal: formatPrice(order.total),
+    orderTotal: formatPrice(order.total),
+    total_amount: formatPrice(order.total),
     payment_method: order.paymentMethod,
     delivery_address: `${order.customer.address}, ${order.customer.city}, ${order.customer.district}`,
     estimated_delivery: '2-5 Business Days',
@@ -92,8 +100,10 @@ export async function resendOrderVerificationCode(
   orderId: string,
   toEmail: string,
   toName: string,
-  verificationCode: string
+  verificationCode: string,
+  orderTotal?: string | number
 ): Promise<void> {
+  const formattedTotal = orderTotal ? (typeof orderTotal === 'number' ? formatPrice(orderTotal) : orderTotal) : '';
   const templateParams: Record<string, unknown> = {
     to_name: toName,
     user_name: toName,
@@ -104,12 +114,21 @@ export async function resendOrderVerificationCode(
     reply_to: toEmail,
 
     verification_code: verificationCode,
-    code: verificationCode,
+    otp_code: verificationCode,
     otp: verificationCode,
+    code: verificationCode,
     passcode: verificationCode,
+    otpCode: verificationCode,
+    OTP_CODE: verificationCode,
+    OTP: verificationCode,
 
     order_id: orderId,
     order_number: orderId,
+    order_total: formattedTotal,
+    ordertotal: formattedTotal,
+    orderTotal: formattedTotal,
+    total: formattedTotal,
+    total_amount: formattedTotal,
     message: `Your verification code for order ${orderId} is: ${verificationCode}. Please enter this on the confirmation screen or provide it when our team contacts you.`,
   };
 
