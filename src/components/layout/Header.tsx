@@ -4,9 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Menu, X, ChevronDown, Phone, User } from 'lucide-react';
+import { ShoppingCart, Menu, X, ChevronDown, Phone, User, LogOut, LayoutGrid } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { SOCIAL_LINKS } from '@/lib/constants';
+import { useAuth } from '@/context/AuthContext';
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
@@ -38,6 +39,7 @@ export default function Header() {
   const [accountOpen, setAccountOpen] = useState(false);
   const { getItemCount, openCart } = useCartStore();
   const itemCount = getItemCount();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -149,29 +151,68 @@ export default function Header() {
                 <button
                   onClick={() => setAccountOpen(!accountOpen)}
                   onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-brand-mid hover:text-brand-gold hover:bg-brand-gold-soft transition-all duration-200"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 ${
+                    user
+                      ? 'text-brand-gold bg-brand-gold-soft hover:bg-brand-gold/20'
+                      : 'text-brand-mid hover:text-brand-gold hover:bg-brand-gold-soft'
+                  }`}
                   aria-label="Account"
                 >
-                  <User size={19} />
+                  {user ? (
+                    <span className="w-7 h-7 rounded-full bg-brand-gold text-white text-xs font-bold flex items-center justify-center">
+                      {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                    </span>
+                  ) : (
+                    <User size={19} />
+                  )}
                 </button>
                 {accountOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-44 bg-brand-white border border-brand-light rounded-2xl shadow-card-hover py-2 z-50 animate-fade-in">
-                    <Link
-                      href="/login"
-                      onClick={() => setAccountOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
-                    >
-                      <User size={14} />
-                      Sign In
-                    </Link>
-                    <div className="border-t border-brand-light mx-3 my-1" />
-                    <Link
-                      href="/register"
-                      onClick={() => setAccountOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
-                    >
-                      Create Account
-                    </Link>
+                  <div className="absolute top-full right-0 mt-2 w-52 bg-brand-white border border-brand-light rounded-2xl shadow-card-hover py-2 z-50 animate-fade-in">
+                    {user ? (
+                      <>
+                        <div className="px-4 py-2 border-b border-brand-light mb-1">
+                          <p className="text-xs font-semibold text-brand-charcoal truncate">
+                            {user.displayName || 'My Account'}
+                          </p>
+                          <p className="text-[11px] text-brand-mid truncate">{user.email}</p>
+                        </div>
+                        <Link
+                          href="/profile"
+                          onClick={() => setAccountOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
+                        >
+                          <LayoutGrid size={14} />
+                          My Profile
+                        </Link>
+                        <div className="border-t border-brand-light mx-3 my-1" />
+                        <button
+                          onClick={() => { signOut(); setAccountOpen(false); }}
+                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut size={14} />
+                          Sign Out
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href="/login"
+                          onClick={() => setAccountOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
+                        >
+                          <User size={14} />
+                          Sign In
+                        </Link>
+                        <div className="border-t border-brand-light mx-3 my-1" />
+                        <Link
+                          href="/register"
+                          onClick={() => setAccountOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
+                        >
+                          Create Account
+                        </Link>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
