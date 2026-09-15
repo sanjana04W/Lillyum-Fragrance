@@ -1,10 +1,21 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import ProductCard from '@/components/products/ProductCard';
 import { getFeaturedProducts } from '@/data/products';
+import { Product } from '@/types';
 
 export default function FeaturedProducts() {
-  const products = getFeaturedProducts(8);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    setProducts(getFeaturedProducts(8));
+    const handleUpdate = () => setProducts(getFeaturedProducts(8));
+    window.addEventListener('lillyum_products_updated', handleUpdate);
+    return () => window.removeEventListener('lillyum_products_updated', handleUpdate);
+  }, []);
 
   return (
     <section className="py-16 bg-brand-white">
