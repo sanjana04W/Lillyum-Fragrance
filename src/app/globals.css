@@ -109,6 +109,11 @@
     @apply input-base appearance-none cursor-pointer;
   }
 
+  /* Gold outline button */
+  .btn-gold-outline {
+    @apply border border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white transition-all duration-200;
+  }
+
   /* Gold badge */
   .badge-gold {
     @apply tag-pill bg-brand-gold-soft text-brand-gold-dark border border-brand-gold/20;
@@ -134,3 +139,24 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+/* ─── Running Horizontal Marquee Ticker ─────────────────────── */
+@keyframes ticker-marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: ticker-marquee 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
