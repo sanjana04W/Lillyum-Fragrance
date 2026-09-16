@@ -46,6 +46,17 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   return (
     <>
       {/* ── Top announcement bar ── */}
@@ -243,68 +254,140 @@ export default function Header() {
           </div>
         </div>
 
-        {/* ── Mobile Menu ── */}
+        {/* ── Mobile Navigation Drawer (Opposite Side: Right Side, 50% / Half Page Width) ── */}
+        {/* Backdrop Overlay */}
         {mobileOpen && (
-          <div className="lg:hidden bg-brand-white border-t border-brand-light animate-slide-up shadow-soft-lg">
-            <nav className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-0.5">
+          <div
+            className="fixed inset-0 z-50 bg-brand-charcoal/50 backdrop-blur-xs lg:hidden transition-opacity duration-300"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Slide-in Drawer */}
+        <aside
+          className={`fixed inset-y-0 right-0 z-50 w-1/2 min-w-[240px] max-w-[85vw] bg-brand-white border-l border-brand-light flex flex-col shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
+            mobileOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+          aria-label="Mobile Navigation"
+        >
+          {/* Drawer Header */}
+          <div className="p-4 px-5 border-b border-brand-light flex items-center justify-between bg-brand-cream/40 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-brand-gold/30 shrink-0">
+                <Image src="/logo.jpg" alt="Lillyum" fill className="object-cover" />
+              </div>
+              <div className="leading-tight">
+                <p className="font-serif font-bold text-xs sm:text-sm text-brand-charcoal tracking-wide">
+                  LILLYUM
+                </p>
+                <p className="text-[9px] text-brand-mid uppercase tracking-widest -mt-0.5">
+                  Studio
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="p-1.5 rounded-xl text-brand-charcoal/60 hover:text-brand-charcoal hover:bg-brand-cream transition-colors cursor-pointer"
+              aria-label="Close menu"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Drawer Navigation Links */}
+          <div className="flex-1 py-3 px-3 overflow-y-auto">
+            <nav className="flex flex-col gap-1">
               {NAV_LINKS.map((link) =>
                 link.children ? (
-                  <div key={link.label}>
-                    <p className="text-brand-muted text-[10px] uppercase tracking-widest font-semibold px-3 pt-3 pb-1">
+                  <div key={link.label} className="pt-2">
+                    <p className="text-brand-muted text-[10px] uppercase tracking-widest font-bold px-3 pb-1">
                       {link.label}
                     </p>
-                    {link.children.map((child) => (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        onClick={() => setMobileOpen(false)}
-                        className="block px-5 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft rounded-lg transition-colors"
-                      >
-                        {child.label}
-                      </Link>
-                    ))}
+                    <div className="space-y-0.5">
+                      {link.children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={() => setMobileOpen(false)}
+                          className="block px-4 py-2 text-xs font-medium text-brand-charcoal/80 hover:text-brand-gold hover:bg-brand-gold-soft rounded-lg transition-colors"
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <Link
                     key={link.label}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className={`block px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                    className={`block px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all ${
                       link.highlight
-                        ? 'bg-brand-gold text-white font-semibold mt-1'
+                        ? 'bg-brand-gold text-white shadow-gold mt-1'
                         : pathname === link.href
-                        ? 'text-brand-gold bg-brand-gold-soft font-semibold'
-                        : 'text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft'
+                        ? 'text-brand-gold bg-brand-gold-soft font-bold'
+                        : 'text-brand-charcoal/80 hover:text-brand-gold hover:bg-brand-gold-soft'
                     }`}
                   >
                     {link.label}
                   </Link>
                 )
               )}
-              <div className="pt-4 mt-2 border-t border-brand-light space-y-0.5 px-1">
+            </nav>
+          </div>
+
+          {/* Drawer Footer (Auth & Social) */}
+          <div className="p-3.5 border-t border-brand-light bg-brand-cream/30 space-y-2.5 shrink-0">
+            {user ? (
+              <div className="space-y-1">
+                <Link
+                  href="/profile"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-brand-charcoal hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-brand-gold text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                  </span>
+                  <span className="truncate">{user.displayName || 'My Profile'}</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    signOut();
+                    setMobileOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                  <LogOut size={13} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1">
                 <Link
                   href="/login"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-brand-charcoal hover:text-brand-gold hover:bg-brand-gold-soft rounded-xl transition-colors"
                 >
-                  <User size={15} /> Sign In
+                  <User size={14} /> Sign In
                 </Link>
                 <Link
                   href="/register"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-brand-charcoal hover:text-brand-gold hover:bg-brand-gold-soft rounded-xl transition-colors"
                 >
-                  <User size={15} /> Create Account
+                  <User size={14} /> Create Account
                 </Link>
               </div>
-              <div className="pt-3 mt-1 border-t border-brand-light flex gap-4 px-3">
-                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="text-brand-muted text-xs hover:text-brand-gold transition-colors">Instagram</a>
-                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="text-brand-muted text-xs hover:text-brand-gold transition-colors">Facebook</a>
-                <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noopener noreferrer" className="text-brand-muted text-xs hover:text-brand-gold transition-colors">TikTok</a>
-              </div>
-            </nav>
+            )}
+
+            <div className="pt-2 border-t border-brand-light/60 flex items-center justify-between text-[10px] text-brand-muted px-2">
+              <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-brand-gold transition-colors">Instagram</a>
+              <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-brand-gold transition-colors">Facebook</a>
+              <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noopener noreferrer" className="hover:text-brand-gold transition-colors">TikTok</a>
+            </div>
           </div>
-        )}
+        </aside>
       </header>
     </>
   );
