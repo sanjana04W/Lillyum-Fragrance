@@ -176,25 +176,115 @@ export async function loginCustomer(
   }
 }
 
-export async function loginCustomerWithGoogle(): Promise<{ success: boolean; error?: string; user?: CustomerUser }> {
+export async function registerOrLoginWithGoogleData(googleUser: {
+  email: string;
+  name: string;
+  photoURL?: string;
+  uid?: string;
+}): Promise<{ success: boolean; error?: string; user?: CustomerUser }> {
+  const cleanEmail = googleUser.email.trim().toLowerCase();
+  const cleanName = googleUser.name.trim() || cleanEmail.split('@')[0];
+  const uid = googleUser.uid || 'google_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+
+  let existingAccounts: Array<CustomerAccountDetails & { password?: string; authProvider?: string; photoURL?: string }> = [];
   try {
-    const cred = await signInWithPopup(auth, googleProvider);
-    const customer: CustomerUser = {
-      uid: cred.user.uid,
-      email: cred.user.email,
-      displayName: cred.user.displayName,
-      photoURL: cred.user.photoURL,
+    existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
+  } catch {
+    existingAccounts = [];
+  }
+
+  const existingIdx = existingAccounts.findIndex(
+    (a) => (a.email && a.email.toLowerCase() === cleanEmail) || a.uid === uid
+  );
+
+  let finalUser: CustomerAccountDetails;
+  if (existingIdx >= 0) {
+    // Existing user logging in with Google
+    existingAccounts[existingIdx] = {
+      ...existingAccounts[existingIdx],
+      name: existingAccounts[existingIdx].name || cleanName,
+      displayName: existingAccounts[existingIdx].displayName || cleanName,
+      photoURL: googleUser.photoURL || existingAccounts[existingIdx].photoURL,
+      authProvider: 'google',
     };
-    setLocalCustomer(customer);
-    return { success: true, user: customer };
+    finalUser = existingAccounts[existingIdx];
+  } else {
+    // New user creating account with Google
+    finalUser = {
+      uid,
+      name: cleanName,
+      displayName: cleanName,
+      email: cleanEmail,
+      photoURL: googleUser.photoURL,
+      createdAt: new Date().toISOString(),
+    };
+    existingAccounts.push({
+      ...finalUser,
+      authProvider: 'google',
+    });
+  }
+
+  try {
+    localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(existingAccounts));
+  } catch (err) {
+    console.error('Storage error:', err);
+  }
+
+  const customer: CustomerUser = {
+    uid: finalUser.uid,
+    email: cleanEmail,
+    displayName: cleanName,
+    photoURL: googleUser.photoURL,
+  };
+
+  setLocalCustomer(customer);
+
+  // Sync with Firestore in background (non-blocking)
+  try {
+    setDoc(
+      doc(db, 'users', customer.uid),
+      {
+        name: cleanName,
+        displayName: cleanName,
+        email: cleanEmail,
+        photoURL: googleUser.photoURL || null,
+        authProvider: 'google',
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    ).catch(() => {});
+  } catch {
+    // ignore
+  }
+
+  return { success: true, user: customer };
+}
+
+export async function loginCustomerWithGoogle(): Promise<{
+  success: boolean;
+  requiresFallback?: boolean;
+  error?: string;
+  user?: CustomerUser;
+}> {
+  try {
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
+    const cred = await signInWithPopup(auth, googleProvider);
+    return await registerOrLoginWithGoogleData({
+      uid: cred.user.uid,
+      email: cred.user.email || '',
+      name: cred.user.displayName || cred.user.email?.split('@')[0] || 'Google User',
+      photoURL: cred.user.photoURL || undefined,
+    });
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code || '';
     if (code === 'auth/popup-closed-by-user') {
       return { success: false, error: 'Sign-in window was closed.' };
     }
+    console.warn('Firebase Google Auth popup error:', code, err);
     return {
       success: false,
-      error: 'Google Sign-In is unavailable. Please create an account with email and password.',
+      requiresFallback: true,
+      error: 'Google popup unavailable. Opening Google Account selector...',
     };
   }
 }
@@ -213,6 +303,8 @@ export interface CustomerAccountDetails {
   name: string;
   displayName: string;
   email: string;
+  photoURL?: string;
+  authProvider?: string;
   phone?: string;
   address?: string;
   city?: string;
