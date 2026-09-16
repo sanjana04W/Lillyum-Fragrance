@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { getAllOrders, getLocalOrders } from '@/services/firestoreService';
 import { formatPrice } from '@/lib/utils';
+import { Order } from '@/types';
 import toast from 'react-hot-toast';
 
 export type AdminRole = 'Owner' | 'Staff';
@@ -65,31 +66,31 @@ const NOTIFICATIONS_STORAGE_KEY = 'lillyum_admin_notifications';
 
 const INITIAL_NOTIFICATIONS: AdminNotificationItem[] = [
   {
-    id: 'notif-4699',
-    orderId: 'MIKI-2026-4699',
-    title: 'New Order: MIKI-2026-4699',
-    time: '15 Sept, 12:58',
-    customerName: 'H.M. Wenuri Sanjana Herath',
-    details: 'Rs. 3,800 • 1 item(s) • Colombo',
-    createdAt: '2026-09-15T12:58:00Z',
+    id: 'notif-lil-001',
+    orderId: 'LIL-2025-001',
+    title: 'New Order: LIL-2025-001',
+    time: '16 Sept, 09:42',
+    customerName: 'Anushka Senanayake',
+    details: 'Rs. 6,150 • 1 item(s) • Colombo',
+    createdAt: '2026-09-16T09:42:00Z',
   },
   {
-    id: 'notif-7052',
-    orderId: 'MIKI-2026-7052',
-    title: 'New Order: MIKI-2026-7052',
-    time: '15 Sept, 12:56',
-    customerName: 'H.M. Wenuri Sanjana Herath',
-    details: 'Rs. 3,450 • 1 item(s) • Colombo',
-    createdAt: '2026-09-15T12:56:00Z',
+    id: 'notif-lil-002',
+    orderId: 'LIL-2025-002',
+    title: 'New Order: LIL-2025-002',
+    time: '16 Sept, 03:42',
+    customerName: 'Rohan De Silva',
+    details: 'Rs. 7,600 • 1 item(s) • Gampaha',
+    createdAt: '2026-09-16T03:42:00Z',
   },
   {
-    id: 'notif-1441',
-    orderId: 'MIKI-2026-1441',
-    title: 'New Order: MIKI-2026-1441',
-    time: '15 Sept, 12:52',
-    customerName: 'H.M. Wenuri Sanjana Herath',
-    details: 'Rs. 4,100 • 1 item(s) • Colombo',
-    createdAt: '2026-09-15T12:52:00Z',
+    id: 'notif-lil-003',
+    orderId: 'LIL-2025-003',
+    title: 'New Order: LIL-2025-003',
+    time: '15 Sept, 11:42',
+    customerName: 'Dilini Jayawardena',
+    details: 'Rs. 8,950 • 1 item(s) • Kandy',
+    createdAt: '2026-09-15T11:42:00Z',
   },
 ];
 
@@ -170,19 +171,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .catch(() => {});
   }, [authed, isLoginPage]);
 
-  // Load saved notifications from localStorage
+  // Load saved notifications from localStorage (purging any stale MIKI data)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-      if (stored !== null) {
-        setNotifications(JSON.parse(stored));
-      } else {
-        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(INITIAL_NOTIFICATIONS));
+    const loadNotifications = () => {
+      try {
+        const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+        if (stored !== null && !stored.includes('MIKI-')) {
+          setNotifications(JSON.parse(stored));
+        } else {
+          // Fresh seeding with exact website orders
+          localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(INITIAL_NOTIFICATIONS));
+          setNotifications(INITIAL_NOTIFICATIONS);
+        }
+      } catch {
         setNotifications(INITIAL_NOTIFICATIONS);
       }
-    } catch {
-      setNotifications(INITIAL_NOTIFICATIONS);
-    }
+    };
+
+    loadNotifications();
+
+    // Listen for live order updates across the website
+    const handleOrdersUpdated = () => {
+      try {
+        const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+        if (stored && stored !== '[]') {
+          loadNotifications();
+        }
+      } catch {}
+    };
+
+    window.addEventListener('lillyum_orders_updated', handleOrdersUpdated);
+    return () => window.removeEventListener('lillyum_orders_updated', handleOrdersUpdated);
   }, []);
 
   // Click outside listener for role dropdown & notification popover
@@ -272,22 +291,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       )}
 
-      {/* Sidebar Navigation Bar (Themed in Brand Gold #B8892A) */}
+      {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#B8892A] border-r border-[#9E731E] flex flex-col transition-transform duration-300 shadow-xl lg:shadow-none ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-brand-light flex flex-col transition-transform duration-300 shadow-soft lg:shadow-none ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Brand Header */}
-        <div className="p-5 border-b border-white/15 flex items-center gap-3">
-          <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-white/20 border border-white/30 shrink-0 shadow-xs">
+        <div className="p-5 border-b border-brand-light/70 flex items-center gap-3">
+          <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-brand-ivory border border-brand-light shrink-0">
             <Image src="/logo.jpg" alt="Lillyum" fill className="object-cover" />
           </div>
           <div>
-            <p className="font-serif text-base font-bold text-white tracking-wide">
+            <p className="font-serif text-base font-bold text-brand-charcoal tracking-wide">
               LILLYUM FRAGRANCE
             </p>
-            <p className="text-[10px] font-semibold text-white/80 uppercase tracking-wider">
+            <p className="text-[10px] font-semibold text-brand-charcoal/40 uppercase tracking-wider">
               OPERATIONS CONTROL PANEL
             </p>
           </div>
@@ -295,7 +314,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Navigation list */}
         <div className="flex-1 py-4 px-3 overflow-y-auto">
-          <p className="text-[11px] font-bold text-white/75 uppercase tracking-widest px-3 mb-2">
+          <p className="text-[11px] font-bold text-[#B8892A] uppercase tracking-widest px-3 mb-2">
             NAVIGATION
           </p>
 
@@ -309,23 +328,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'bg-white text-[#B8892A] shadow-soft font-bold'
-                      : 'text-white/90 hover:text-white hover:bg-white/15 border border-transparent'
+                      ? 'border border-brand-gold bg-brand-gold-soft text-brand-gold shadow-xs'
+                      : 'text-brand-charcoal/70 hover:text-brand-charcoal hover:bg-brand-cream/70 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon size={16} className={isActive ? 'text-[#B8892A]' : 'text-white/80'} />
+                    <Icon size={16} className={isActive ? 'text-brand-gold' : 'text-brand-charcoal/50'} />
                     <span>{label}</span>
                   </div>
 
                   {badgeKey === 'orders' && pendingOrdersCount > 0 && (
-                    <span
-                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full leading-none ${
-                        isActive
-                          ? 'bg-[#B8892A] text-white'
-                          : 'bg-white text-[#B8892A]'
-                      }`}
-                    >
+                    <span className="bg-brand-gold text-white text-[11px] font-bold px-2 py-0.5 rounded-full leading-none">
                       {pendingOrdersCount}
                     </span>
                   )}
@@ -336,20 +349,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Sidebar Bottom section */}
-        <div className="p-4 border-t border-white/15 space-y-2.5">
+        <div className="p-4 border-t border-brand-light/70 space-y-2.5">
           {/* Access status badge */}
-          <div className="w-full border border-white/25 bg-white/10 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-white">
+          <div className="w-full border border-brand-light bg-brand-cream/60 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-brand-charcoal">
             {currentRole === 'Owner' ? (
               <>
-                <ShieldCheck size={15} className="text-white" />
-                <span className="text-[11px] uppercase tracking-wider font-bold text-white">
+                <ShieldCheck size={15} className="text-brand-gold" />
+                <span className="text-[11px] uppercase tracking-wider font-bold text-brand-charcoal">
                   FULL OWNER ACCESS
                 </span>
               </>
             ) : (
               <>
-                <UserCheck size={15} className="text-white" />
-                <span className="text-[11px] uppercase tracking-wider font-bold text-white">
+                <UserCheck size={15} className="text-brand-gold" />
+                <span className="text-[11px] uppercase tracking-wider font-bold text-brand-charcoal">
                   STAFF OPERATOR ACCESS
                 </span>
               </>
@@ -360,16 +373,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link
             href="/"
             target="_blank"
-            className="w-full border border-white/30 bg-white/15 hover:bg-white text-white hover:text-[#B8892A] rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold transition-all shadow-2xs"
+            className="w-full border border-brand-light bg-white hover:bg-brand-cream/80 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-brand-charcoal transition-colors shadow-2xs"
           >
-            <ExternalLink size={14} className="opacity-80" />
+            <ExternalLink size={14} className="text-brand-charcoal/50" />
             <span>Visit Online Store</span>
           </Link>
 
           {/* Logout button */}
           <button
             onClick={handleSignOut}
-            className="w-full border border-white/30 bg-white/90 hover:bg-white text-rose-600 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            className="w-full border border-rose-100 bg-rose-50/80 hover:bg-rose-100/90 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-rose-600 transition-colors shadow-2xs cursor-pointer"
           >
             <LogOut size={14} className="text-rose-500" />
             <span>Logout</span>
