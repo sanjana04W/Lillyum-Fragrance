@@ -55,8 +55,13 @@ const config: Config = {
         'slide-in-right': 'slideInRight 0.3s ease-out',
         'pulse-subtle':   'pulseSubtle 2s infinite',
         'float':          'float 3s ease-in-out infinite',
+        'marquee':        'marquee 32s linear infinite',
       },
       keyframes: {
+        marquee: {
+          '0%':   { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
         fadeIn: {
           '0%':   { opacity: '0' },
           '100%': { opacity: '1' },
