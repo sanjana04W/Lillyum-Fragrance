@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, ChevronRight, ShoppingCart, Package, Shield, Truck } from 'lucide-react';
-import { getStoredProducts, SAMPLE_PRODUCTS } from '@/data/products';
+import { getStoredProducts, getRelatedProducts } from '@/data/products';
 import { useCartStore } from '@/store/cartStore';
 import { trackViewContent, trackAddToCart } from '@/services/analyticsService';
 import { formatPrice, getDiscountPercentage, getWhatsAppLink } from '@/lib/utils';
@@ -83,9 +83,7 @@ export default function ProductDetailPage({ params }: Props) {
     toast.success('Added to cart!', { icon: '🛒', style: { background: '#1A1A1A', color: '#F5F5F0' } });
   };
 
-  const related = SAMPLE_PRODUCTS
-    .filter((p) => p.id !== product.id && p.categories.some((c) => product.categories.includes(c)))
-    .slice(0, 4);
+  const related = getRelatedProducts(product, 4);
 
   const waLink = getWhatsAppLink(
     '94752369613',
