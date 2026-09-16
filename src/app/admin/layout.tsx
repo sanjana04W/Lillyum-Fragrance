@@ -27,6 +27,8 @@ import {
   Check,
   TrendingUp,
   UserCheck,
+  CheckCheck,
+  X,
 } from 'lucide-react';
 import { getAllOrders, getLocalOrders } from '@/services/firestoreService';
 import { formatPrice } from '@/lib/utils';
@@ -49,6 +51,48 @@ const NAV_ITEMS = [
   { label: 'System Settings', href: '/admin/settings', icon: Settings },
 ];
 
+export interface AdminNotificationItem {
+  id: string;
+  orderId?: string;
+  title: string;
+  time: string;
+  customerName: string;
+  details: string;
+  createdAt: string;
+}
+
+const NOTIFICATIONS_STORAGE_KEY = 'lillyum_admin_notifications';
+
+const INITIAL_NOTIFICATIONS: AdminNotificationItem[] = [
+  {
+    id: 'notif-4699',
+    orderId: 'MIKI-2026-4699',
+    title: 'New Order: MIKI-2026-4699',
+    time: '15 Sept, 12:58',
+    customerName: 'H.M. Wenuri Sanjana Herath',
+    details: 'Rs. 3,800 • 1 item(s) • Colombo',
+    createdAt: '2026-09-15T12:58:00Z',
+  },
+  {
+    id: 'notif-7052',
+    orderId: 'MIKI-2026-7052',
+    title: 'New Order: MIKI-2026-7052',
+    time: '15 Sept, 12:56',
+    customerName: 'H.M. Wenuri Sanjana Herath',
+    details: 'Rs. 3,450 • 1 item(s) • Colombo',
+    createdAt: '2026-09-15T12:56:00Z',
+  },
+  {
+    id: 'notif-1441',
+    orderId: 'MIKI-2026-1441',
+    title: 'New Order: MIKI-2026-1441',
+    time: '15 Sept, 12:52',
+    customerName: 'H.M. Wenuri Sanjana Herath',
+    details: 'Rs. 4,100 • 1 item(s) • Colombo',
+    createdAt: '2026-09-15T12:52:00Z',
+  },
+];
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -59,6 +103,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [currentRole, setCurrentRole] = useState<AdminRole>('Owner');
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Notifications state & dropdown
+  const [notifications, setNotifications] = useState<AdminNotificationItem[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   // Stats for top bar & sidebar badges — initialized instantly from cache
   const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(() => {
@@ -121,16 +170,61 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .catch(() => {});
   }, [authed, isLoginPage]);
 
-  // Click outside listener for role dropdown
+  // Load saved notifications from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      if (stored !== null) {
+        setNotifications(JSON.parse(stored));
+      } else {
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(INITIAL_NOTIFICATIONS));
+        setNotifications(INITIAL_NOTIFICATIONS);
+      }
+    } catch {
+      setNotifications(INITIAL_NOTIFICATIONS);
+    }
+  }, []);
+
+  // Click outside listener for role dropdown & notification popover
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (roleDropdownRef.current && !roleDropdownRef.current.contains(event.target as Node)) {
         setRoleDropdownOpen(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Dismiss / Mark individual notification as read (removes from list)
+  const handleDismissNotification = (id: string) => {
+    setNotifications((prev) => {
+      const updated = prev.filter((n) => n.id !== id);
+      try {
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  // Mark all notifications as read
+  const handleMarkAllRead = () => {
+    setNotifications([]);
+    try {
+      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify([]));
+    } catch {}
+    toast.success('All notifications marked as read', { icon: '✓' });
+  };
+
+  // Click a notification: marks it read, closes dropdown, navigates to orders
+  const handleNotificationClick = (n: AdminNotificationItem) => {
+    handleDismissNotification(n.id);
+    setNotificationsOpen(false);
+    router.push('/admin/orders');
+  };
 
   const STAFF_ALLOWED_PATHS = ['/admin', '/admin/orders', '/admin/inventory', '/admin/messages'];
 
@@ -178,22 +272,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar Navigation Bar (Themed in Brand Gold #B8892A) */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-brand-light flex flex-col transition-transform duration-300 shadow-soft lg:shadow-none ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#B8892A] border-r border-[#9E731E] flex flex-col transition-transform duration-300 shadow-xl lg:shadow-none ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Brand Header */}
-        <div className="p-5 border-b border-brand-light/70 flex items-center gap-3">
-          <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-brand-ivory border border-brand-light shrink-0">
+        <div className="p-5 border-b border-white/15 flex items-center gap-3">
+          <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-white/20 border border-white/30 shrink-0 shadow-xs">
             <Image src="/logo.jpg" alt="Lillyum" fill className="object-cover" />
           </div>
           <div>
-            <p className="font-serif text-base font-bold text-brand-charcoal tracking-wide">
+            <p className="font-serif text-base font-bold text-white tracking-wide">
               LILLYUM FRAGRANCE
             </p>
-            <p className="text-[10px] font-semibold text-brand-charcoal/40 uppercase tracking-wider">
+            <p className="text-[10px] font-semibold text-white/80 uppercase tracking-wider">
               OPERATIONS CONTROL PANEL
             </p>
           </div>
@@ -201,7 +295,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Navigation list */}
         <div className="flex-1 py-4 px-3 overflow-y-auto">
-          <p className="text-[11px] font-bold text-brand-charcoal/40 uppercase tracking-widest px-3 mb-2">
+          <p className="text-[11px] font-bold text-white/75 uppercase tracking-widest px-3 mb-2">
             NAVIGATION
           </p>
 
@@ -215,17 +309,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'border border-brand-gold bg-brand-gold-soft text-brand-gold shadow-xs'
-                      : 'text-brand-charcoal/70 hover:text-brand-charcoal hover:bg-brand-cream/70 border border-transparent'
+                      ? 'bg-white text-[#B8892A] shadow-soft font-bold'
+                      : 'text-white/90 hover:text-white hover:bg-white/15 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon size={16} className={isActive ? 'text-brand-gold' : 'text-brand-charcoal/50'} />
+                    <Icon size={16} className={isActive ? 'text-[#B8892A]' : 'text-white/80'} />
                     <span>{label}</span>
                   </div>
 
                   {badgeKey === 'orders' && pendingOrdersCount > 0 && (
-                    <span className="bg-brand-gold text-white text-[11px] font-bold px-2 py-0.5 rounded-full leading-none">
+                    <span
+                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full leading-none ${
+                        isActive
+                          ? 'bg-[#B8892A] text-white'
+                          : 'bg-white text-[#B8892A]'
+                      }`}
+                    >
                       {pendingOrdersCount}
                     </span>
                   )}
@@ -236,20 +336,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Sidebar Bottom section */}
-        <div className="p-4 border-t border-brand-light/70 space-y-2.5">
+        <div className="p-4 border-t border-white/15 space-y-2.5">
           {/* Access status badge */}
-          <div className="w-full border border-brand-light bg-brand-cream/60 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-brand-charcoal">
+          <div className="w-full border border-white/25 bg-white/10 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-white">
             {currentRole === 'Owner' ? (
               <>
-                <ShieldCheck size={15} className="text-brand-gold" />
-                <span className="text-[11px] uppercase tracking-wider font-bold text-brand-charcoal">
+                <ShieldCheck size={15} className="text-white" />
+                <span className="text-[11px] uppercase tracking-wider font-bold text-white">
                   FULL OWNER ACCESS
                 </span>
               </>
             ) : (
               <>
-                <UserCheck size={15} className="text-brand-gold" />
-                <span className="text-[11px] uppercase tracking-wider font-bold text-brand-charcoal">
+                <UserCheck size={15} className="text-white" />
+                <span className="text-[11px] uppercase tracking-wider font-bold text-white">
                   STAFF OPERATOR ACCESS
                 </span>
               </>
@@ -260,16 +360,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link
             href="/"
             target="_blank"
-            className="w-full border border-brand-light bg-white hover:bg-brand-cream/80 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-brand-charcoal transition-colors shadow-2xs"
+            className="w-full border border-white/30 bg-white/15 hover:bg-white text-white hover:text-[#B8892A] rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold transition-all shadow-2xs"
           >
-            <ExternalLink size={14} className="text-brand-charcoal/50" />
+            <ExternalLink size={14} className="opacity-80" />
             <span>Visit Online Store</span>
           </Link>
 
           {/* Logout button */}
           <button
             onClick={handleSignOut}
-            className="w-full border border-rose-100 bg-rose-50/80 hover:bg-rose-100/90 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-rose-600 transition-colors shadow-2xs cursor-pointer"
+            className="w-full border border-white/30 bg-white/90 hover:bg-white text-rose-600 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-bold transition-all shadow-2xs cursor-pointer"
           >
             <LogOut size={14} className="text-rose-500" />
             <span>Logout</span>
@@ -353,24 +453,149 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               )}
             </div>
 
-            {/* 3. Notification Bell */}
-            <Link
-              href="/admin/orders"
-              className="relative p-2 rounded-full border border-brand-light bg-white hover:bg-brand-cream text-brand-charcoal/70 hover:text-brand-charcoal transition-colors shadow-2xs"
-              title="Notifications"
-            >
-              <Bell size={16} />
-              {pendingOrdersCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-gold text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                  {pendingOrdersCount}
-                </span>
-              )}
-            </Link>
+            {/* 3. Notification Bell with Dropdown Popover (Matching Image 1) */}
+            <div className="relative" ref={notificationsRef}>
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className={`relative p-2 rounded-full border transition-colors shadow-2xs cursor-pointer ${
+                  notificationsOpen
+                    ? 'border-brand-gold bg-brand-gold-soft text-brand-gold'
+                    : 'border-brand-light bg-white hover:bg-brand-cream text-brand-charcoal/70 hover:text-brand-charcoal'
+                }`}
+                title="Notifications"
+                aria-label="Open notifications"
+              >
+                <Bell size={16} />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none shadow-xs">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
 
-            {/* 4. User Profile */}
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-brand-light overflow-hidden z-50 animate-in fade-in zoom-in-95">
+                  {/* Popover Header */}
+                  <div className="p-4 px-5 border-b border-brand-light/80 flex items-center justify-between bg-white">
+                    <div className="flex items-center gap-2.5">
+                      <Bell size={17} className="text-brand-charcoal" />
+                      <h3 className="font-serif font-bold text-sm text-brand-charcoal">
+                        Notifications
+                      </h3>
+                      {notifications.length > 0 && (
+                        <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          {notifications.length} new
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {notifications.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleMarkAllRead}
+                          className="text-[11px] font-semibold text-brand-charcoal/60 hover:text-brand-gold flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <CheckCheck size={13} />
+                          <span>All read</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setNotificationsOpen(false)}
+                        className="p-1 rounded-lg text-brand-charcoal/40 hover:text-brand-charcoal hover:bg-brand-cream transition-colors cursor-pointer"
+                        aria-label="Close notifications"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Popover Body: Notification items */}
+                  <div className="max-h-80 overflow-y-auto divide-y divide-brand-light/60">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center text-brand-charcoal/40 space-y-2">
+                        <CheckCheck size={26} className="mx-auto text-emerald-500/70" />
+                        <p className="text-xs font-medium">All caught up! No new notifications.</p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => handleNotificationClick(n)}
+                          className="p-4 hover:bg-brand-cream/40 transition-colors flex items-start gap-3.5 cursor-pointer relative group"
+                        >
+                          <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/70 text-emerald-600 flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                            <ShoppingBag size={18} />
+                          </div>
+
+                          <div className="flex-1 min-w-0 pr-5">
+                            <p className="text-xs font-bold text-brand-charcoal truncate">
+                              {n.title}
+                            </p>
+                            <p className="text-[10px] text-brand-charcoal/40 mt-0.5">
+                              {n.time}
+                            </p>
+                            <p className="text-xs font-semibold text-brand-charcoal mt-1 truncate">
+                              {n.customerName}
+                            </p>
+                            <p className="text-[11px] text-brand-charcoal/60 mt-0.5 truncate">
+                              {n.details}
+                            </p>
+                          </div>
+
+                          {/* Individual dismiss button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDismissNotification(n.id);
+                            }}
+                            className="absolute top-3.5 right-3.5 p-1 rounded-md text-brand-charcoal/30 hover:text-brand-charcoal hover:bg-brand-cream transition-colors cursor-pointer"
+                            title="Mark as read"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Popover Footer (Matching Image 1) */}
+                  <div className="p-3.5 px-5 border-t border-brand-light/80 bg-brand-cream/30 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotificationsOpen(false);
+                        router.push('/admin/orders');
+                      }}
+                      className="text-xs font-bold text-brand-charcoal/70 hover:text-brand-gold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <span>📦</span>
+                      <span>View Orders</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotificationsOpen(false);
+                        router.push('/admin/messages');
+                      }}
+                      className="text-xs font-bold text-brand-charcoal/70 hover:text-brand-gold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <span>💬</span>
+                      <span>View Messages</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 4. User Profile (Changed 'M' to 'L' for Lillyum Owner) */}
             <div className="flex items-center gap-2.5 pl-1">
               <div className="w-8 h-8 rounded-full bg-brand-gold text-white font-bold flex items-center justify-center text-xs shadow-xs">
-                {currentRole === 'Owner' ? 'M' : 'S'}
+                {currentRole === 'Owner' ? 'L' : 'S'}
               </div>
               <div className="hidden md:block leading-tight">
                 <p className="text-xs font-bold text-brand-charcoal">
