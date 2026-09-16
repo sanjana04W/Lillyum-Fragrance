@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { registerCustomer, loginCustomerWithGoogle } from '@/services/customerAuthService';
+import GoogleSignInModal from '@/components/auth/GoogleSignInModal';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -24,6 +25,7 @@ function RegisterForm() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleModalOpen, setGoogleModalOpen] = useState(false);
   const [agreed, setAgreed] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,18 +53,21 @@ function RegisterForm() {
   };
 
   const handleGoogle = async () => {
-    if (!agreed) { toast.error('Please accept the Terms & Privacy Policy first.'); return; }
+    setAgreed(true);
     setGoogleLoading(true);
     try {
       const res = await loginCustomerWithGoogle();
       if (res.success) {
         toast.success('Welcome to Lillyum!', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
-        router.push(redirectUrl);
+        const targetUrl = redirectUrl && redirectUrl !== '/' ? `/profile?continue=${encodeURIComponent(redirectUrl)}` : '/profile';
+        router.push(targetUrl);
+      } else if (res.requiresFallback) {
+        setGoogleModalOpen(true);
       } else {
         toast.error(res.error || 'Google sign-up failed.');
       }
     } catch {
-      toast.error('Google sign-up failed. Please try again.');
+      setGoogleModalOpen(true);
     } finally {
       setGoogleLoading(false);
     }
@@ -237,6 +242,16 @@ function RegisterForm() {
           </div>
         </div>
       </div>
+
+      <GoogleSignInModal
+        isOpen={googleModalOpen}
+        onClose={() => setGoogleModalOpen(false)}
+        onSuccess={() => {
+          const targetUrl = redirectUrl && redirectUrl !== '/' ? `/profile?continue=${encodeURIComponent(redirectUrl)}` : '/profile';
+          router.push(targetUrl);
+        }}
+        mode="signup"
+      />
     </div>
   );
 }
