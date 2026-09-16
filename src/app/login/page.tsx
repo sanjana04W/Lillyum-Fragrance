@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loginCustomer, loginCustomerWithGoogle } from '@/services/customerAuthService';
+import GoogleSignInModal from '@/components/auth/GoogleSignInModal';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
@@ -19,6 +20,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleModalOpen, setGoogleModalOpen] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,11 +49,13 @@ function LoginForm() {
       if (res.success) {
         toast.success('Signed in with Google!', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
         router.push(redirectUrl);
+      } else if (res.requiresFallback) {
+        setGoogleModalOpen(true);
       } else {
         toast.error(res.error || 'Google sign-in failed.');
       }
     } catch {
-      toast.error('Google sign-in failed. Please try again.');
+      setGoogleModalOpen(true);
     } finally {
       setGoogleLoading(false);
     }
@@ -188,6 +192,13 @@ function LoginForm() {
           </div>
         </div>
       </div>
+
+      <GoogleSignInModal
+        isOpen={googleModalOpen}
+        onClose={() => setGoogleModalOpen(false)}
+        onSuccess={() => router.push(redirectUrl)}
+        mode="signin"
+      />
     </div>
   );
 }
