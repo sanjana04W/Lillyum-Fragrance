@@ -28,6 +28,15 @@ const NAV_LINKS = [
   { label: 'About', href: '/about' },
 ];
 
+const ANNOUNCEMENT_ITEMS = [
+  { text: 'NEW DROPS EVERY WEEK' },
+  { text: 'FREE DELIVERY OVER RS. 15,000' },
+  { text: 'CASH ON DELIVERY ISLAND-WIDE' },
+  { text: '100% AUTHENTIC LUXURY FRAGRANCES' },
+  { text: 'WHATSAPP: 0752 369 613', href: 'https://wa.me/94752369613' },
+  { text: 'EXCLUSIVE MEMBER OFFERS' },
+];
+
 export default function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -59,12 +68,57 @@ export default function Header() {
 
   return (
     <>
-      {/* ── Top announcement bar ── */}
-      <div className="bg-brand-charcoal text-brand-gold-lighter text-center text-xs py-2 px-4 tracking-wide">
-        🚚 Free delivery on orders over LKR 15,000 &nbsp;·&nbsp; Cash on Delivery island-wide &nbsp;·&nbsp;
-        <a href="https://wa.me/94752369613" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white transition-colors">
-          WhatsApp: 0752 369 613
-        </a>
+      {/* ── Running Horizontal Announcement Bar (Continuous Marquee Ticker) ── */}
+      <div className="bg-brand-charcoal text-brand-gold-lighter overflow-hidden border-b border-white/10 select-none py-2 relative">
+        <div className="animate-marquee">
+          {/* Track 1 */}
+          <div className="flex items-center shrink-0">
+            {ANNOUNCEMENT_ITEMS.map((item, idx) => (
+              <span
+                key={`a1-${idx}`}
+                className="flex items-center text-[10px] sm:text-[11px] font-semibold tracking-[0.22em] uppercase whitespace-nowrap"
+              >
+                <span className="text-brand-gold mx-5 sm:mx-8 text-[9px] select-none">✦</span>
+                {item.href ? (
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors underline underline-offset-2"
+                  >
+                    {item.text}
+                  </a>
+                ) : (
+                  <span>{item.text}</span>
+                )}
+              </span>
+            ))}
+          </div>
+
+          {/* Track 2 (Seamless loop duplicate) */}
+          <div className="flex items-center shrink-0" aria-hidden="true">
+            {ANNOUNCEMENT_ITEMS.map((item, idx) => (
+              <span
+                key={`a2-${idx}`}
+                className="flex items-center text-[10px] sm:text-[11px] font-semibold tracking-[0.22em] uppercase whitespace-nowrap"
+              >
+                <span className="text-brand-gold mx-5 sm:mx-8 text-[9px] select-none">✦</span>
+                {item.href ? (
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors underline underline-offset-2"
+                  >
+                    {item.text}
+                  </a>
+                ) : (
+                  <span>{item.text}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       <header
