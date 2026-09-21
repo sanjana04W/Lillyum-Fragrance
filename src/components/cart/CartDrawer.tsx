@@ -84,12 +84,22 @@ export default function CartDrawer() {
           ) : (
             items.map((item) => (
               <div key={item.sku} className="flex gap-3 p-3 bg-brand-cream rounded-2xl border border-brand-light">
-                <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-brand-ivory">
+                <Link
+                  href={`/product/${item.productSlug || item.productId}`}
+                  onClick={closeCart}
+                  className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-brand-ivory hover:opacity-80 transition-opacity"
+                >
                   <Image src={item.image} alt={item.title} fill className="object-cover" />
-                </div>
+                </Link>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] text-brand-gold font-semibold uppercase tracking-wide">{item.brand}</p>
-                  <p className="text-sm font-semibold text-brand-charcoal line-clamp-1">{item.title}</p>
+                  <Link
+                    href={`/product/${item.productSlug || item.productId}`}
+                    onClick={closeCart}
+                    className="text-sm font-semibold text-brand-charcoal line-clamp-1 hover:text-brand-gold transition-colors block"
+                  >
+                    {item.title}
+                  </Link>
                   <p className="text-xs text-brand-muted">{item.size}ml</p>
                   <div className="flex items-center justify-between mt-2">
                     {/* Quantity controls */}

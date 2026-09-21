@@ -44,7 +44,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <Link href={`/product/${product.slug}`} className="group block">
+    <Link href={`/product/${product.slug || product.id}`} className="group block">
       <div className="card-surface card-hover overflow-hidden">
         {/* Image area */}
         <div className="relative overflow-hidden bg-brand-ivory aspect-square">

@@ -28,6 +28,20 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/products/:slug',
+        destination: '/product/:slug',
+        permanent: true,
+      },
+      {
+        source: '/products',
+        destination: '/shop',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

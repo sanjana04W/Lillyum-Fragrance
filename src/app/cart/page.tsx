@@ -52,12 +52,20 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => (
               <div key={item.sku} className="flex gap-4 bg-brand-white rounded-2xl p-4 sm:p-5 border border-brand-light shadow-card">
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shrink-0 bg-brand-ivory border border-brand-light">
+                <Link
+                  href={`/product/${item.productSlug || item.productId}`}
+                  className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shrink-0 bg-brand-ivory border border-brand-light hover:opacity-80 transition-opacity"
+                >
                   <Image src={item.image} alt={item.title} fill className="object-cover" />
-                </div>
+                </Link>
                 <div className="flex-1 min-w-0">
                   <p className="text-brand-gold text-xs font-semibold uppercase tracking-wider">{item.brand}</p>
-                  <h3 className="text-brand-charcoal font-semibold text-sm sm:text-base">{item.title}</h3>
+                  <Link
+                    href={`/product/${item.productSlug || item.productId}`}
+                    className="text-brand-charcoal font-semibold text-sm sm:text-base hover:text-brand-gold transition-colors block line-clamp-1"
+                  >
+                    {item.title}
+                  </Link>
                   <p className="text-brand-mid text-xs mb-3">{item.size}ml</p>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2 bg-brand-cream border border-brand-light rounded-xl p-1">
