@@ -484,6 +484,38 @@ export async function createInquiry(inquiry: Omit<Inquiry, 'id'>): Promise<void>
   });
 }
 
+export async function getAllInquiries(): Promise<Inquiry[]> {
+  try {
+    const q = query(collection(db, 'inquiries'), orderBy('createdAt', 'desc'));
+    const snapshot = await withTimeout(getDocs(q), 5000, { docs: [] } as any);
+    return snapshot.docs.map((d: any) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+      } as Inquiry;
+    });
+  } catch (err) {
+    console.warn('Failed to fetch inquiries:', err);
+    return [];
+  }
+}
+
+export async function updateInquiryStatus(
+  id: string,
+  status: Inquiry['status'],
+  internalNotes?: string
+): Promise<void> {
+  const updates: Record<string, unknown> = {
+    status,
+    updatedAt: Timestamp.now(),
+  };
+  if (internalNotes !== undefined) updates.internalNotes = internalNotes;
+  await updateDoc(doc(db, 'inquiries', id), updates);
+}
+
 // ---- Admin & Full Data Sync Functions ----
 
 export async function getAllOrders(): Promise<Order[]> {

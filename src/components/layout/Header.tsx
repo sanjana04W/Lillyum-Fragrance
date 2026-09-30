@@ -152,29 +152,52 @@ export default function Header() {
 
             {/* ── Desktop Nav ── */}
             <nav className="hidden lg:flex items-center gap-1">
-              {NAV_LINKS.map((link) =>
-                link.children ? (
+              {NAV_LINKS.map((link) => {
+                const isChildActive = link.children?.some((child) => pathname === child.href);
+                return link.children ? (
                   <div
                     key={link.label}
                     className="relative"
                     onMouseEnter={() => setOpenDropdown(link.label)}
                     onMouseLeave={() => setOpenDropdown(null)}
                   >
-                    <button className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-brand-dark hover:text-brand-gold rounded-lg hover:bg-brand-gold-soft transition-all duration-200">
+                    <button
+                      type="button"
+                      onClick={() => setOpenDropdown(openDropdown === link.label ? null : link.label)}
+                      className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        isChildActive || openDropdown === link.label
+                          ? 'text-brand-gold bg-brand-gold-soft font-semibold'
+                          : 'text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft'
+                      }`}
+                    >
                       {link.label}
-                      <ChevronDown size={13} className={`transition-transform duration-200 ${openDropdown === link.label ? 'rotate-180' : ''}`} />
+                      <ChevronDown
+                        size={13}
+                        className={`transition-transform duration-200 ${
+                          openDropdown === link.label ? 'rotate-180 text-brand-gold' : ''
+                        }`}
+                      />
                     </button>
                     {openDropdown === link.label && (
                       <div className="absolute top-full left-0 mt-1 w-52 bg-brand-white border border-brand-light rounded-2xl shadow-card-hover py-2 animate-fade-in z-50">
-                        {link.children.map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            className="flex items-center px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
+                        {link.children.map((child) => {
+                          const isActive = pathname === child.href;
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={() => setOpenDropdown(null)}
+                              className={`flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                                isActive
+                                  ? 'text-brand-gold bg-brand-gold-soft/80 font-semibold'
+                                  : 'text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft'
+                              }`}
+                            >
+                              <span>{child.label}</span>
+                              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand-gold" />}
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -192,8 +215,8 @@ export default function Header() {
                   >
                     {link.label}
                   </Link>
-                )
-              )}
+                );
+              })}
             </nav>
 
             {/* ── Right actions ── */}
@@ -359,16 +382,24 @@ export default function Header() {
                       {link.label}
                     </p>
                     <div className="space-y-0.5">
-                      {link.children.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={() => setMobileOpen(false)}
-                          className="block px-4 py-2 text-xs font-medium text-brand-charcoal/80 hover:text-brand-gold hover:bg-brand-gold-soft rounded-lg transition-colors"
-                        >
-                          {child.label}
-                        </Link>
-                      ))}
+                      {link.children.map((child) => {
+                        const isActive = pathname === child.href;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={() => setMobileOpen(false)}
+                            className={`flex items-center justify-between px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
+                              isActive
+                                ? 'text-brand-gold bg-brand-gold-soft font-semibold'
+                                : 'text-brand-charcoal/80 hover:text-brand-gold hover:bg-brand-gold-soft'
+                            }`}
+                          >
+                            <span>{child.label}</span>
+                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand-gold" />}
+                          </Link>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (

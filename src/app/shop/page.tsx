@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useMemo, useEffect } from 'react';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X, Sparkles } from 'lucide-react';
 import ProductCard from '@/components/products/ProductCard';
 import Button from '@/components/ui/Button';
 import { getStoredProducts, CATEGORIES, BRANDS } from '@/data/products';
@@ -14,6 +15,14 @@ const SORT_OPTIONS: { label: string; value: ProductSortOption }[] = [
   { label: 'Price: Low to High', value: 'price_asc' },
   { label: 'Price: High to Low', value: 'price_desc' },
   { label: 'Best Selling', value: 'best_selling' },
+];
+
+const COLLECTION_CATEGORIES = [
+  { label: 'All Collection', href: '/shop', slug: undefined },
+  { label: 'Women', href: '/shop/women', slug: 'women' },
+  { label: 'Men', href: '/shop/men', slug: 'men' },
+  { label: 'Unisex', href: '/shop/unisex', slug: 'unisex' },
+  { label: 'Gift Sets', href: '/shop/gift-sets', slug: 'gift-sets' },
 ];
 
 interface ShopPageProps {
@@ -86,8 +95,35 @@ export default function ShopPage({ params }: ShopPageProps) {
       {/* Page header */}
       <div className="bg-brand-white border-b border-brand-light py-8 sm:py-10">
         <div className="container-padded">
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-brand-charcoal">{pageTitle}</h1>
-          <p className="text-brand-mid text-sm mt-1">{filtered.length} products found</p>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <p className="text-brand-gold text-xs uppercase tracking-[0.25em] font-semibold mb-1">
+                Lillyum Collections
+              </p>
+              <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-brand-charcoal">{pageTitle}</h1>
+              <p className="text-brand-mid text-sm mt-1">{filtered.length} products found</p>
+            </div>
+
+            {/* Persistent Category / Collection Quick Switcher */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              {COLLECTION_CATEGORIES.map((item) => {
+                const isSelected = categorySlug === item.slug || (!categorySlug && !item.slug);
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`shrink-0 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 transform active:scale-95 ${
+                      isSelected
+                        ? 'bg-brand-charcoal text-brand-gold shadow-card font-semibold scale-102 ring-1 ring-brand-gold/40'
+                        : 'bg-brand-cream text-brand-charcoal/80 hover:bg-brand-gold-soft hover:text-brand-gold-dark hover:shadow-soft'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -193,15 +229,15 @@ export default function ShopPage({ params }: ShopPageProps) {
           </div>
         )}
 
-        {/* Grid */}
+        {/* Grid with smooth transition */}
         {filtered.length > 0 ? (
-          <div className="product-grid">
+          <div key={categorySlug || 'all'} className="product-grid animate-fade-in transition-all duration-300">
             {filtered.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-brand-white rounded-2xl border border-brand-light">
+          <div className="text-center py-16 bg-brand-white rounded-2xl border border-brand-light animate-fade-in">
             <p className="text-brand-mid mb-4">No products match your filters.</p>
             <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
           </div>

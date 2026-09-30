@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { registerCustomer, loginCustomerWithGoogle } from '@/services/customerAuthService';
 import GoogleSignInModal from '@/components/auth/GoogleSignInModal';
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const passwordRules = [
@@ -20,7 +20,8 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
 
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirm?: string; agreed?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,17 +31,45 @@ function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password) { toast.error('Please fill in all fields.'); return; }
-    if (form.password !== form.confirm) { toast.error('Passwords do not match.'); return; }
-    if (!passwordRules.every(r => r.test(form.password))) { toast.error('Password does not meet the requirements.'); return; }
-    if (!agreed) { toast.error('Please accept the Terms & Privacy Policy.'); return; }
+    const newErrors: { name?: string; email?: string; password?: string; confirm?: string; agreed?: string } = {};
 
+    if (!form.name.trim()) newErrors.name = 'Full name is required.';
+    if (!form.email.trim()) {
+      newErrors.email = 'Email address is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      newErrors.email = 'Please enter a valid email address.';
+    }
+    if (!form.password) {
+      newErrors.password = 'Password is required.';
+    } else if (!passwordRules.every((r) => r.test(form.password))) {
+      newErrors.password = 'Password must meet all 3 criteria above.';
+    }
+    if (!form.confirm) {
+      newErrors.confirm = 'Please repeat your password.';
+    } else if (form.password !== form.confirm) {
+      newErrors.confirm = 'Passwords do not match.';
+    }
+    if (!agreed) {
+      newErrors.agreed = 'You must agree to the Terms of Service and Privacy Policy.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      if (newErrors.name) toast.error(newErrors.name);
+      else if (newErrors.email) toast.error(newErrors.email);
+      else if (newErrors.password) toast.error(newErrors.password);
+      else if (newErrors.confirm) toast.error(newErrors.confirm);
+      else if (newErrors.agreed) toast.error(newErrors.agreed);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
     try {
-      const res = await registerCustomer(form.name, form.email, form.password);
+      const res = await registerCustomer(form.name, form.email, form.password, form.phone);
       if (res.success) {
         toast.success('Account created! Welcome to Lillyum.', { style: { background: '#FAF7F2', color: '#1C1C1E' } });
-        const targetUrl = redirectUrl && redirectUrl !== '/' ? `/profile?continue=${encodeURIComponent(redirectUrl)}` : '/profile';
+        const targetUrl = redirectUrl && redirectUrl !== '/' ? redirectUrl : '/profile';
         router.push(targetUrl);
       } else {
         toast.error(res.error || 'Account creation failed. Please try again.');
@@ -154,41 +183,97 @@ function RegisterForm() {
               <div className="flex-1 h-px bg-brand-light" />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               {/* Name */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-brand-charcoal">Full Name</label>
+                <label className="text-sm font-medium text-brand-charcoal">
+                  Full Name <span className="text-brand-gold">*</span>
+                </label>
                 <div className="relative">
                   <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
-                  <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  <input
+                    type="text"
+                    required
+                    value={form.name}
+                    onChange={(e) => {
+                      setForm({ ...form, name: e.target.value });
+                      if (errors.name) setErrors({ ...errors, name: undefined });
+                    }}
                     placeholder="Your full name"
-                    className="w-full pl-10 pr-4 py-3 bg-brand-white border border-brand-light rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold transition-colors" />
+                    className={`w-full pl-10 pr-4 py-3 bg-brand-white border rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 transition-colors ${
+                      errors.name ? 'border-red-400' : 'border-brand-light focus:border-brand-gold'
+                    }`}
+                  />
                 </div>
+                {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
               </div>
 
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-brand-charcoal">Email Address</label>
+                <label className="text-sm font-medium text-brand-charcoal">
+                  Email Address <span className="text-brand-gold">*</span>
+                </label>
                 <div className="relative">
                   <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
-                  <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  <input
+                    type="email"
+                    required
+                    value={form.email}
+                    onChange={(e) => {
+                      setForm({ ...form, email: e.target.value });
+                      if (errors.email) setErrors({ ...errors, email: undefined });
+                    }}
                     placeholder="your@email.com"
-                    className="w-full pl-10 pr-4 py-3 bg-brand-white border border-brand-light rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold transition-colors" />
+                    className={`w-full pl-10 pr-4 py-3 bg-brand-white border rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 transition-colors ${
+                      errors.email ? 'border-red-400' : 'border-brand-light focus:border-brand-gold'
+                    }`}
+                  />
+                </div>
+                {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+              </div>
+
+              {/* Phone (Optional) */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-brand-charcoal">
+                  Phone Number <span className="text-brand-muted text-xs font-normal">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="e.g. 0771234567"
+                    className="w-full pl-10 pr-4 py-3 bg-brand-white border border-brand-light rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold transition-colors"
+                  />
                 </div>
               </div>
 
               {/* Password */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-brand-charcoal">Password</label>
+                <label className="text-sm font-medium text-brand-charcoal">
+                  Password <span className="text-brand-gold">*</span>
+                </label>
                 <div className="relative">
                   <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
-                  <input type={showPassword ? 'text' : 'password'} required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={form.password}
+                    onChange={(e) => {
+                      setForm({ ...form, password: e.target.value });
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
                     placeholder="Create a password"
-                    className="w-full pl-10 pr-11 py-3 bg-brand-white border border-brand-light rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold transition-colors" />
+                    className={`w-full pl-10 pr-11 py-3 bg-brand-white border rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 transition-colors ${
+                      errors.password ? 'border-red-400' : 'border-brand-light focus:border-brand-gold'
+                    }`}
+                  />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-gold transition-colors">
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
+                {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
                 {form.password && (
                   <div className="flex gap-3 pt-1 flex-wrap">
                     {passwordRules.map((r) => (
@@ -203,36 +288,63 @@ function RegisterForm() {
 
               {/* Confirm Password */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-brand-charcoal">Confirm Password</label>
+                <label className="text-sm font-medium text-brand-charcoal">
+                  Confirm Password <span className="text-brand-gold">*</span>
+                </label>
                 <div className="relative">
                   <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-muted pointer-events-none" />
-                  <input type={showConfirm ? 'text' : 'password'} required value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    required
+                    value={form.confirm}
+                    onChange={(e) => {
+                      setForm({ ...form, confirm: e.target.value });
+                      if (errors.confirm) setErrors({ ...errors, confirm: undefined });
+                    }}
                     placeholder="Repeat your password"
-                    className={`w-full pl-10 pr-11 py-3 bg-brand-white border rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 transition-colors ${form.confirm && form.confirm !== form.password ? 'border-red-400 focus:border-red-400' : 'border-brand-light focus:border-brand-gold'}`} />
+                    className={`w-full pl-10 pr-11 py-3 bg-brand-white border rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 transition-colors ${
+                      errors.confirm || (form.confirm && form.confirm !== form.password)
+                        ? 'border-red-400 focus:border-red-400'
+                        : 'border-brand-light focus:border-brand-gold'
+                    }`}
+                  />
                   <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-gold transition-colors">
                     {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
-                {form.confirm && form.confirm !== form.password && (
+                {errors.confirm ? (
+                  <p className="text-xs text-red-500">{errors.confirm}</p>
+                ) : form.confirm && form.confirm !== form.password ? (
                   <p className="text-xs text-red-500">Passwords do not match.</p>
-                )}
+                ) : null}
               </div>
 
               {/* Terms checkbox */}
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <div className="relative mt-0.5">
-                  <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="sr-only peer" />
-                  <div className="w-4 h-4 border-2 border-brand-light rounded peer-checked:bg-brand-gold peer-checked:border-brand-gold transition-colors group-hover:border-brand-gold flex items-center justify-center">
-                    {agreed && <CheckCircle2 size={10} className="text-white" />}
+              <div className="space-y-1">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div className="relative mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={agreed}
+                      onChange={(e) => {
+                        setAgreed(e.target.checked);
+                        if (errors.agreed) setErrors({ ...errors, agreed: undefined });
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-4 h-4 border-2 border-brand-light rounded peer-checked:bg-brand-gold peer-checked:border-brand-gold transition-colors group-hover:border-brand-gold flex items-center justify-center">
+                      {agreed && <CheckCircle2 size={10} className="text-white" />}
+                    </div>
                   </div>
-                </div>
-                <span className="text-xs text-brand-mid leading-relaxed">
-                  I agree to the{' '}
-                  <Link href="/policies/terms" className="text-brand-gold hover:text-brand-gold-dark underline">Terms of Service</Link>
-                  {' '}and{' '}
-                  <Link href="/policies/privacy" className="text-brand-gold hover:text-brand-gold-dark underline">Privacy Policy</Link>.
-                </span>
-              </label>
+                  <span className="text-xs text-brand-mid leading-relaxed">
+                    I agree to the{' '}
+                    <Link href="/policies/terms" className="text-brand-gold hover:text-brand-gold-dark underline">Terms of Service</Link>
+                    {' '}and{' '}
+                    <Link href="/policies/privacy" className="text-brand-gold hover:text-brand-gold-dark underline">Privacy Policy</Link>.
+                  </span>
+                </label>
+                {errors.agreed && <p className="text-xs text-red-500">{errors.agreed}</p>}
+              </div>
 
               <button type="submit" disabled={loading || googleLoading}
                 className="w-full flex items-center justify-center gap-2 bg-brand-gold hover:bg-brand-gold-dark text-white font-semibold text-sm py-3.5 rounded-xl transition-all duration-200 shadow-gold disabled:opacity-50 disabled:cursor-not-allowed">

@@ -48,13 +48,23 @@ export function setLocalCustomer(user: CustomerUser | null) {
 export async function registerCustomer(
   name: string,
   email: string,
-  password: string
+  password: string,
+  phone?: string
 ): Promise<{ success: boolean; error?: string; user?: CustomerUser }> {
   const cleanEmail = email.trim().toLowerCase();
   const cleanName = name.trim();
+  const cleanPhone = phone?.trim() || '';
 
   // Check local customer accounts first
-  let existingAccounts: Array<{ uid: string; name: string; email: string; password: string; createdAt: string }> = [];
+  let existingAccounts: Array<{
+    uid: string;
+    name: string;
+    displayName: string;
+    email: string;
+    password?: string;
+    phone?: string;
+    createdAt: string;
+  }> = [];
   try {
     existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
   } catch {
@@ -76,6 +86,7 @@ export async function registerCustomer(
     displayName: cleanName,
     email: cleanEmail,
     password,
+    phone: cleanPhone,
     createdAt: new Date().toISOString(),
   };
 
@@ -94,7 +105,20 @@ export async function registerCustomer(
 
   setLocalCustomer(customer);
 
-  // Background attempt to sync with Firebase Auth (non-blocking, will not hang UI)
+  // Sync with Firestore in background (non-blocking, will not hang UI)
+  try {
+    setDoc(doc(db, 'users', uid), {
+      name: cleanName,
+      displayName: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone || null,
+      createdAt: new Date().toISOString(),
+    }).catch(() => {});
+  } catch {
+    // ignore
+  }
+
+  // Attempt Firebase Auth creation
   try {
     createUserWithEmailAndPassword(auth, cleanEmail, password)
       .then(async (cred) => {
@@ -102,15 +126,17 @@ export async function registerCustomer(
           await updateProfile(cred.user, { displayName: cleanName });
           await setDoc(doc(db, 'users', cred.user.uid), {
             name: cleanName,
+            displayName: cleanName,
             email: cleanEmail,
+            phone: cleanPhone || null,
             createdAt: new Date().toISOString(),
-          });
+          }, { merge: true });
         } catch {
           // ignore
         }
       })
       .catch(() => {
-        // Firebase Auth disabled/offline — local customer already saved
+        // Firebase Auth disabled/offline or network timeout — local customer already saved
       });
   } catch {
     // ignore
