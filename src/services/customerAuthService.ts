@@ -55,93 +55,66 @@ export async function registerCustomer(
   const cleanName = name.trim();
   const cleanPhone = phone?.trim() || '';
 
-  // Check local customer accounts first
-  let existingAccounts: Array<{
-    uid: string;
-    name: string;
-    displayName: string;
-    email: string;
-    password?: string;
-    phone?: string;
-    createdAt: string;
-  }> = [];
+  // ── Step 1: Try Firebase Auth first (primary cross-device store) ──────────
   try {
-    existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
-  } catch {
-    existingAccounts = [];
+    const firebaseRegisterPromise = createUserWithEmailAndPassword(auth, cleanEmail, password);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT')), 5000)
+    );
+
+    const cred = await Promise.race([firebaseRegisterPromise, timeoutPromise]);
+    const firebaseUid = cred.user.uid;
+
+    // Update Firebase Auth display name
+    try { await updateProfile(cred.user, { displayName: cleanName }); } catch { /* ignore */ }
+
+    // Write user profile to Firestore
+    try {
+      await setDoc(doc(db, 'users', firebaseUid), {
+        name: cleanName,
+        displayName: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone || null,
+        createdAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch { /* ignore Firestore failure */ }
+
+    // Cache locally using the Firebase UID
+    const customer: CustomerUser = { uid: firebaseUid, email: cleanEmail, displayName: cleanName };
+
+    let accs: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = [];
+    try { accs = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]'); } catch { /* */ }
+    if (!accs.some((a) => a.email?.toLowerCase() === cleanEmail)) {
+      accs.push({ uid: firebaseUid, name: cleanName, displayName: cleanName, email: cleanEmail, password, phone: cleanPhone, createdAt: new Date().toISOString() });
+      try { localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(accs)); } catch { /* */ }
+    }
+
+    setLocalCustomer(customer);
+    return { success: true, user: customer };
+
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code || '';
+    if (code === 'auth/email-already-in-use') {
+      return { success: false, error: 'This email is already registered. Try signing in.' };
+    }
+    // Firebase unreachable — fall back to local-only registration
+    console.warn('Firebase Auth unavailable, registering locally:', code || (err as Error).message);
   }
 
-  const alreadyExists = existingAccounts.some(
-    (a) => a.email && a.email.toLowerCase() === cleanEmail
-  );
-  if (alreadyExists) {
+  // ── Step 2: Local-only fallback (offline / Firebase disabled) ─────────────
+  let existingAccounts: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = [];
+  try { existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]'); } catch { existingAccounts = []; }
+
+  if (existingAccounts.some((a) => a.email && a.email.toLowerCase() === cleanEmail)) {
     return { success: false, error: 'This email is already registered. Try signing in.' };
   }
 
-  // Create customer record immediately
   const uid = 'cust_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-  const newAccount = {
-    uid,
-    name: cleanName,
-    displayName: cleanName,
-    email: cleanEmail,
-    password,
-    phone: cleanPhone,
-    createdAt: new Date().toISOString(),
-  };
+  existingAccounts.push({ uid, name: cleanName, displayName: cleanName, email: cleanEmail, password, phone: cleanPhone, createdAt: new Date().toISOString() });
+  try { localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(existingAccounts)); } catch { /* */ }
 
-  existingAccounts.push(newAccount);
-  try {
-    localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(existingAccounts));
-  } catch (err) {
-    console.error('Storage error:', err);
-  }
-
-  const customer: CustomerUser = {
-    uid,
-    email: cleanEmail,
-    displayName: cleanName,
-  };
-
+  const customer: CustomerUser = { uid, email: cleanEmail, displayName: cleanName };
   setLocalCustomer(customer);
-
-  // Sync with Firestore in background (non-blocking, will not hang UI)
-  try {
-    setDoc(doc(db, 'users', uid), {
-      name: cleanName,
-      displayName: cleanName,
-      email: cleanEmail,
-      phone: cleanPhone || null,
-      createdAt: new Date().toISOString(),
-    }).catch(() => {});
-  } catch {
-    // ignore
-  }
-
-  // Attempt Firebase Auth creation
-  try {
-    createUserWithEmailAndPassword(auth, cleanEmail, password)
-      .then(async (cred) => {
-        try {
-          await updateProfile(cred.user, { displayName: cleanName });
-          await setDoc(doc(db, 'users', cred.user.uid), {
-            name: cleanName,
-            displayName: cleanName,
-            email: cleanEmail,
-            phone: cleanPhone || null,
-            createdAt: new Date().toISOString(),
-          }, { merge: true });
-        } catch {
-          // ignore
-        }
-      })
-      .catch(() => {
-        // Firebase Auth disabled/offline or network timeout — local customer already saved
-      });
-  } catch {
-    // ignore
-  }
-
   return { success: true, user: customer };
 }
 
@@ -151,34 +124,11 @@ export async function loginCustomer(
 ): Promise<{ success: boolean; error?: string; user?: CustomerUser }> {
   const cleanEmail = email.trim().toLowerCase();
 
-  // 1. Check local customer accounts first (instant response)
-  try {
-    const existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
-    const matched = existingAccounts.find(
-      (a: { email: string }) => a.email && a.email.toLowerCase() === cleanEmail
-    );
-    if (matched) {
-      if (matched.password === password) {
-        const customer: CustomerUser = {
-          uid: matched.uid,
-          email: matched.email,
-          displayName: matched.name || matched.displayName || cleanEmail.split('@')[0],
-        };
-        setLocalCustomer(customer);
-        return { success: true, user: customer };
-      } else {
-        return { success: false, error: 'Invalid password. Please try again.' };
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  // 2. If not found locally, try Firebase Auth with a fast timeout (1.5s max)
+  // ── Step 1: Try Firebase Auth first (works on ANY device) ─────────────────
   try {
     const authPromise = signInWithEmailAndPassword(auth, cleanEmail, password);
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT')), 1500)
+      setTimeout(() => reject(new Error('TIMEOUT')), 5000)
     );
 
     const cred = await Promise.race([authPromise, timeoutPromise]);
@@ -188,18 +138,67 @@ export async function loginCustomer(
       displayName: cred.user.displayName || cleanEmail.split('@')[0],
       photoURL: cred.user.photoURL,
     };
+
+    // Seed local cache so future logins on this device are instant
+    try {
+      let accs: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = [];
+      try { accs = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]'); } catch { /* */ }
+      const idx = accs.findIndex((a) => a.email?.toLowerCase() === cleanEmail || a.uid === cred.user.uid);
+      if (idx >= 0) {
+        // Update existing entry with Firebase UID and latest password
+        accs[idx] = { ...accs[idx], uid: cred.user.uid, password };
+      } else {
+        accs.push({ uid: cred.user.uid, name: customer.displayName || '', displayName: customer.displayName || '', email: cleanEmail, password, phone: '', createdAt: new Date().toISOString() });
+      }
+      localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(accs));
+    } catch { /* non-critical */ }
+
     setLocalCustomer(customer);
     return { success: true, user: customer };
+
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code || '';
-    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+
+    // Firebase returned a definitive wrong-password / user-not-found answer
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
       return { success: false, error: 'Invalid email or password.' };
     }
     if (code === 'auth/user-not-found') {
+      // Before giving up, check local cache (account may have been created offline)
+      try {
+        const existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
+        const matched = existingAccounts.find((a: { email: string }) => a.email?.toLowerCase() === cleanEmail);
+        if (matched && matched.password === password) {
+          const customer: CustomerUser = { uid: matched.uid, email: matched.email, displayName: matched.name || matched.displayName || cleanEmail.split('@')[0] };
+          setLocalCustomer(customer);
+          return { success: true, user: customer };
+        }
+      } catch { /* */ }
       return { success: false, error: 'No account found with this email. Please create one.' };
     }
-    return { success: false, error: 'Invalid email or password.' };
+
+    // Firebase timed out / offline — fall back to local cache
+    console.warn('Firebase Auth unreachable, trying local cache:', code || (err as Error).message);
   }
+
+  // ── Step 2: Local cache fallback (offline / Firebase disabled) ────────────
+  try {
+    const existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
+    const matched = existingAccounts.find(
+      (a: { email: string }) => a.email && a.email.toLowerCase() === cleanEmail
+    );
+    if (matched) {
+      if (matched.password === password) {
+        const customer: CustomerUser = { uid: matched.uid, email: matched.email, displayName: matched.name || matched.displayName || cleanEmail.split('@')[0] };
+        setLocalCustomer(customer);
+        return { success: true, user: customer };
+      } else {
+        return { success: false, error: 'Invalid password. Please try again.' };
+      }
+    }
+  } catch { /* ignore */ }
+
+  return { success: false, error: 'Unable to sign in. Please check your connection and try again.' };
 }
 
 export async function registerOrLoginWithGoogleData(googleUser: {
