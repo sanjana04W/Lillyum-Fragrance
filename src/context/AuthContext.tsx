@@ -28,23 +28,25 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<CustomerUser | User | null>(null);
+  const [user, setUser] = useState<CustomerUser | User | null>(() => getLocalCustomer());
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => !getLocalCustomer());
 
   useEffect(() => {
-    // Check local customer account first so UI renders immediately
-    const initialLocal = getLocalCustomer();
-    if (initialLocal) {
-      setUser(initialLocal);
-    }
+    // Safety timeout: Never keep loading stuck true for more than 1.2s
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 1200);
 
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(safetyTimer);
       if (firebaseUser) {
         setUser(firebaseUser);
         try {
-          const d = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (d.exists()) {
+          const docPromise = getDoc(doc(db, 'users', firebaseUser.uid));
+          const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+          const d = await Promise.race([docPromise, timeoutPromise]);
+          if (d && d.exists()) {
             setAdminUser({ id: d.id, ...d.data() } as AdminUser);
           } else {
             setAdminUser(null);
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleCustomerAuthChange = () => {
       const current = getLocalCustomer();
       setUser(current);
+      setLoading(false);
     };
     window.addEventListener('lillyum-auth-change', handleCustomerAuthChange);
 

@@ -33,33 +33,42 @@ function RegisterForm() {
     e.preventDefault();
     const newErrors: { name?: string; email?: string; password?: string; confirm?: string; agreed?: string } = {};
 
-    if (!form.name.trim()) newErrors.name = 'Full name is required.';
+    if (!form.name.trim()) {
+      newErrors.name = 'Please enter your full name.';
+    } else if (form.name.trim().length < 2) {
+      newErrors.name = 'Full name must be at least 2 characters.';
+    }
+
     if (!form.email.trim()) {
-      newErrors.email = 'Email address is required.';
+      newErrors.email = 'Please enter your email address.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      newErrors.email = 'Please enter a valid email address.';
+      newErrors.email = 'Please enter a valid email address (e.g. name@example.com).';
     }
+
     if (!form.password) {
-      newErrors.password = 'Password is required.';
-    } else if (!passwordRules.every((r) => r.test(form.password))) {
-      newErrors.password = 'Password must meet all 3 criteria above.';
+      newErrors.password = 'Please create a password.';
+    } else if (form.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long.';
+    } else if (!/[A-Z]/.test(form.password)) {
+      newErrors.password = 'Password must include at least one uppercase letter (A-Z).';
+    } else if (!/[0-9]/.test(form.password)) {
+      newErrors.password = 'Password must include at least one number (0-9).';
     }
+
     if (!form.confirm) {
       newErrors.confirm = 'Please repeat your password.';
     } else if (form.password !== form.confirm) {
-      newErrors.confirm = 'Passwords do not match.';
+      newErrors.confirm = 'Passwords do not match. Please check again.';
     }
+
     if (!agreed) {
-      newErrors.agreed = 'You must agree to the Terms of Service and Privacy Policy.';
+      newErrors.agreed = 'Please agree to the Terms of Service and Privacy Policy to continue.';
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      if (newErrors.name) toast.error(newErrors.name);
-      else if (newErrors.email) toast.error(newErrors.email);
-      else if (newErrors.password) toast.error(newErrors.password);
-      else if (newErrors.confirm) toast.error(newErrors.confirm);
-      else if (newErrors.agreed) toast.error(newErrors.agreed);
+      const firstError = Object.values(newErrors)[0];
+      if (firstError) toast.error(firstError);
       return;
     }
 
@@ -73,6 +82,9 @@ function RegisterForm() {
         router.push(targetUrl);
       } else {
         toast.error(res.error || 'Account creation failed. Please try again.');
+        if (res.error?.toLowerCase().includes('email') || res.error?.toLowerCase().includes('registered')) {
+          setErrors({ email: res.error });
+        }
       }
     } catch {
       toast.error('Account creation failed. Please try again.');
@@ -242,7 +254,9 @@ function RegisterForm() {
                   <input
                     type="tel"
                     value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, phone: e.target.value });
+                    }}
                     placeholder="e.g. 0771234567"
                     className="w-full pl-10 pr-4 py-3 bg-brand-white border border-brand-light rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 focus:border-brand-gold transition-colors"
                   />
@@ -264,7 +278,7 @@ function RegisterForm() {
                       setForm({ ...form, password: e.target.value });
                       if (errors.password) setErrors({ ...errors, password: undefined });
                     }}
-                    placeholder="Create a password"
+                    placeholder="Create a secure password"
                     className={`w-full pl-10 pr-11 py-3 bg-brand-white border rounded-xl text-sm text-brand-charcoal placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-gold/40 transition-colors ${
                       errors.password ? 'border-red-400' : 'border-brand-light focus:border-brand-gold'
                     }`}
@@ -273,17 +287,18 @@ function RegisterForm() {
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
-                {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
-                {form.password && (
-                  <div className="flex gap-3 pt-1 flex-wrap">
-                    {passwordRules.map((r) => (
-                      <span key={r.label} className={`flex items-center gap-1 text-xs transition-colors ${r.test(form.password) ? 'text-green-600' : 'text-brand-muted'}`}>
-                        <CheckCircle2 size={11} className={r.test(form.password) ? 'text-green-600' : 'text-brand-muted'} />
+                {errors.password && <p className="text-xs text-red-500 font-medium">{errors.password}</p>}
+                <div className="flex gap-2.5 pt-1 flex-wrap">
+                  {passwordRules.map((r) => {
+                    const passed = Boolean(form.password && r.test(form.password));
+                    return (
+                      <span key={r.label} className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${passed ? 'text-green-600' : 'text-brand-muted'}`}>
+                        <CheckCircle2 size={11} className={passed ? 'text-green-600' : 'text-brand-muted/70'} />
                         {r.label}
                       </span>
-                    ))}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Confirm Password */}
@@ -313,16 +328,16 @@ function RegisterForm() {
                   </button>
                 </div>
                 {errors.confirm ? (
-                  <p className="text-xs text-red-500">{errors.confirm}</p>
+                  <p className="text-xs text-red-500 font-medium">{errors.confirm}</p>
                 ) : form.confirm && form.confirm !== form.password ? (
-                  <p className="text-xs text-red-500">Passwords do not match.</p>
+                  <p className="text-xs text-red-500 font-medium">Passwords do not match.</p>
                 ) : null}
               </div>
 
               {/* Terms checkbox */}
-              <div className="space-y-1">
-                <label className="flex items-start gap-3 cursor-pointer group">
-                  <div className="relative mt-0.5">
+              <div className="space-y-1 pt-1">
+                <label className="flex items-start gap-3 cursor-pointer group select-none">
+                  <div className="relative mt-0.5 shrink-0">
                     <input
                       type="checkbox"
                       checked={agreed}
@@ -332,18 +347,29 @@ function RegisterForm() {
                       }}
                       className="sr-only peer"
                     />
-                    <div className="w-4 h-4 border-2 border-brand-light rounded peer-checked:bg-brand-gold peer-checked:border-brand-gold transition-colors group-hover:border-brand-gold flex items-center justify-center">
-                      {agreed && <CheckCircle2 size={10} className="text-white" />}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAgreed(!agreed);
+                        if (errors.agreed) setErrors({ ...errors, agreed: undefined });
+                      }}
+                      className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center cursor-pointer ${
+                        agreed
+                          ? 'bg-brand-gold border-brand-gold text-white shadow-xs'
+                          : 'border-brand-mid/40 bg-brand-white group-hover:border-brand-gold'
+                      }`}
+                    >
+                      {agreed && <CheckCircle2 size={13} className="text-white" />}
                     </div>
                   </div>
-                  <span className="text-xs text-brand-mid leading-relaxed">
+                  <span className="text-xs text-brand-mid leading-relaxed pt-0.5">
                     I agree to the{' '}
-                    <Link href="/policies/terms" className="text-brand-gold hover:text-brand-gold-dark underline">Terms of Service</Link>
+                    <Link href="/policies/terms" className="text-brand-gold hover:text-brand-gold-dark underline font-medium">Terms of Service</Link>
                     {' '}and{' '}
-                    <Link href="/policies/privacy" className="text-brand-gold hover:text-brand-gold-dark underline">Privacy Policy</Link>.
+                    <Link href="/policies/privacy" className="text-brand-gold hover:text-brand-gold-dark underline font-medium">Privacy Policy</Link>.
                   </span>
                 </label>
-                {errors.agreed && <p className="text-xs text-red-500">{errors.agreed}</p>}
+                {errors.agreed && <p className="text-xs text-red-500 font-medium">{errors.agreed}</p>}
               </div>
 
               <button type="submit" disabled={loading || googleLoading}

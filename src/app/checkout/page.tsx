@@ -15,6 +15,7 @@ import { generateOrderId, formatPrice } from '@/lib/utils';
 import { getDeliveryFee as getZoneFee, ALL_DISTRICTS } from '@/lib/constants';
 import { Order } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { getCustomerAccountDetails } from '@/services/customerAuthService';
 import { LogIn, CheckCircle2, ShieldCheck, RefreshCw, Loader2 } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -93,6 +94,18 @@ export default function CheckoutPage() {
     if (user) {
       if (user.displayName) setValue('name', user.displayName);
       if (user.email) setValue('email', user.email);
+      try {
+        const details = getCustomerAccountDetails(user.uid || user.email || '');
+        if (details?.phone) setValue('phone', details.phone);
+        if (details?.address) setValue('address', details.address);
+        if (details?.city) setValue('city', details.city);
+        if (details?.district) {
+          setValue('district', details.district);
+          setDistrict(details.district);
+        }
+      } catch {
+        // ignore
+      }
     }
   }, [user, setValue]);
 

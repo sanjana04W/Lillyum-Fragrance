@@ -6,7 +6,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 export interface CustomerUser {
@@ -55,7 +55,7 @@ export async function registerCustomer(
   const cleanName = name.trim();
   const cleanPhone = phone?.trim() || '';
 
-  // ── Step 1: Save to localStorage IMMEDIATELY (instant, never fails) ────────
+  // ── Step 1: Check duplicate & save to localStorage IMMEDIATELY (instant) ───
   let existingAccounts: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = [];
   try { existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]'); } catch { existingAccounts = []; }
 
@@ -63,51 +63,71 @@ export async function registerCustomer(
     return { success: false, error: 'This email is already registered. Try signing in.' };
   }
 
-  // Use a temporary local UID (may be replaced by Firebase UID below)
+  // Use a local UID (may be replaced by Firebase UID upon background sync)
   const localUid = 'cust_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-  existingAccounts.push({ uid: localUid, name: cleanName, displayName: cleanName, email: cleanEmail, password, phone: cleanPhone, createdAt: new Date().toISOString() });
+  existingAccounts.push({
+    uid: localUid,
+    name: cleanName,
+    displayName: cleanName,
+    email: cleanEmail,
+    password,
+    phone: cleanPhone,
+    createdAt: new Date().toISOString(),
+  });
   try { localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(existingAccounts)); } catch { /* */ }
 
   const localCustomer: CustomerUser = { uid: localUid, email: cleanEmail, displayName: cleanName };
   setLocalCustomer(localCustomer);
 
-  // ── Step 2: Try Firebase Auth in background (non-blocking for UI) ──────────
-  // Fire-and-forget: if it succeeds, update local record with Firebase UID
-  createUserWithEmailAndPassword(auth, cleanEmail, password)
-    .then(async (cred) => {
-      const firebaseUid = cred.user.uid;
-      // Update display name
-      try { await updateProfile(cred.user, { displayName: cleanName }); } catch { /* */ }
-      // Sync profile to Firestore (non-blocking)
-      setDoc(doc(db, 'users', firebaseUid), {
-        name: cleanName, displayName: cleanName, email: cleanEmail,
-        phone: cleanPhone || null, createdAt: new Date().toISOString(),
-      }, { merge: true }).catch(() => { /* ignore Firestore failure */ });
-      // Update local cache with the real Firebase UID
-      try {
-        const accs: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
-        const idx = accs.findIndex((a) => a.uid === localUid || a.email?.toLowerCase() === cleanEmail);
-        if (idx >= 0) { accs[idx] = { ...accs[idx], uid: firebaseUid }; }
-        localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(accs));
-        // Update current session with Firebase UID
-        const cur = getLocalCustomer();
-        if (cur && cur.uid === localUid) setLocalCustomer({ ...cur, uid: firebaseUid });
-      } catch { /* */ }
-    })
-    .catch((err: { code?: string }) => {
-      if (err?.code === 'auth/email-already-in-use') {
-        // Another device already registered this email — that's fine, local record is valid
-        console.info('Firebase: email already in use — local account valid');
-      } else {
-        // Firebase unavailable — local account still works on this device
-        console.warn('Firebase Auth registration failed (local account saved):', err?.code);
-      }
-    });
+  // ── Step 2: Save to Firestore 'users' & 'customers' (non-blocking) ─────────
+  try {
+    setDoc(doc(db, 'users', localUid), {
+      name: cleanName,
+      displayName: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone || null,
+      createdAt: new Date().toISOString(),
+    }, { merge: true }).catch(() => {});
+  } catch { /* ignore */ }
 
-  // ── Return success immediately — don't wait for Firebase ─────────────────
+  try {
+    addDoc(collection(db, 'customers'), {
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone || '',
+      orderHistory: [],
+      createdAt: Timestamp.now(),
+    }).catch(() => {});
+  } catch { /* ignore */ }
+
+  // ── Step 3: Sync with Firebase Auth in background (for cross-device login) ─
+  try {
+    createUserWithEmailAndPassword(auth, cleanEmail, password)
+      .then(async (cred) => {
+        const firebaseUid = cred.user.uid;
+        try { await updateProfile(cred.user, { displayName: cleanName }); } catch { /* */ }
+        // Sync profile under real Firebase UID as well
+        setDoc(doc(db, 'users', firebaseUid), {
+          name: cleanName, displayName: cleanName, email: cleanEmail,
+          phone: cleanPhone || null, createdAt: new Date().toISOString(),
+        }, { merge: true }).catch(() => {});
+        // Update local cache with Firebase UID
+        try {
+          const accs: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
+          const idx = accs.findIndex((a) => a.uid === localUid || a.email?.toLowerCase() === cleanEmail);
+          if (idx >= 0) { accs[idx] = { ...accs[idx], uid: firebaseUid }; }
+          localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(accs));
+          const cur = getLocalCustomer();
+          if (cur && cur.uid === localUid) setLocalCustomer({ ...cur, uid: firebaseUid });
+        } catch { /* */ }
+      })
+      .catch((err: { code?: string; message?: string }) => {
+        console.info('Firebase Auth background creation info:', err?.code || err?.message);
+      });
+  } catch { /* ignore */ }
+
   return { success: true, user: localCustomer };
 }
-
 
 export async function loginCustomer(
   email: string,
@@ -115,11 +135,40 @@ export async function loginCustomer(
 ): Promise<{ success: boolean; error?: string; user?: CustomerUser }> {
   const cleanEmail = email.trim().toLowerCase();
 
-  // ── Step 1: Try Firebase Auth first (works on ANY device) ─────────────────
+  // ── Step 1: Check local customer accounts first (instant login) ────────────
+  try {
+    const existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
+    const matched = existingAccounts.find(
+      (a: { email: string }) => a.email && a.email.toLowerCase() === cleanEmail
+    );
+    if (matched) {
+      if (matched.password === password) {
+        const customer: CustomerUser = {
+          uid: matched.uid,
+          email: matched.email,
+          displayName: matched.name || matched.displayName || cleanEmail.split('@')[0],
+        };
+        setLocalCustomer(customer);
+        // Sync with Firebase Auth in background so cross-device state stays valid
+        try {
+          signInWithEmailAndPassword(auth, cleanEmail, password).catch(() => {
+            createUserWithEmailAndPassword(auth, cleanEmail, password).catch(() => {});
+          });
+        } catch { /* ignore */ }
+        return { success: true, user: customer };
+      } else {
+        return { success: false, error: 'Incorrect password. Please try again.' };
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // ── Step 2: Try Firebase Auth (for users logging in on a new device) ───────
   try {
     const authPromise = signInWithEmailAndPassword(auth, cleanEmail, password);
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT')), 5000)
+      setTimeout(() => reject(new Error('TIMEOUT')), 3500)
     );
 
     const cred = await Promise.race([authPromise, timeoutPromise]);
@@ -130,16 +179,23 @@ export async function loginCustomer(
       photoURL: cred.user.photoURL,
     };
 
-    // Seed local cache so future logins on this device are instant
+    // Cache locally on this new device
     try {
       let accs: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = [];
       try { accs = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]'); } catch { /* */ }
       const idx = accs.findIndex((a) => a.email?.toLowerCase() === cleanEmail || a.uid === cred.user.uid);
       if (idx >= 0) {
-        // Update existing entry with Firebase UID and latest password
         accs[idx] = { ...accs[idx], uid: cred.user.uid, password };
       } else {
-        accs.push({ uid: cred.user.uid, name: customer.displayName || '', displayName: customer.displayName || '', email: cleanEmail, password, phone: '', createdAt: new Date().toISOString() });
+        accs.push({
+          uid: cred.user.uid,
+          name: customer.displayName || '',
+          displayName: customer.displayName || '',
+          email: cleanEmail,
+          password,
+          phone: '',
+          createdAt: new Date().toISOString(),
+        });
       }
       localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(accs));
     } catch { /* non-critical */ }
@@ -149,47 +205,17 @@ export async function loginCustomer(
 
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code || '';
-
-    // Firebase returned a definitive wrong-password / user-not-found answer
-    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
-      return { success: false, error: 'Invalid email or password.' };
+    if (code === 'auth/wrong-password') {
+      return { success: false, error: 'Incorrect password. Please try again.' };
     }
     if (code === 'auth/user-not-found') {
-      // Before giving up, check local cache (account may have been created offline)
-      try {
-        const existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
-        const matched = existingAccounts.find((a: { email: string }) => a.email?.toLowerCase() === cleanEmail);
-        if (matched && matched.password === password) {
-          const customer: CustomerUser = { uid: matched.uid, email: matched.email, displayName: matched.name || matched.displayName || cleanEmail.split('@')[0] };
-          setLocalCustomer(customer);
-          return { success: true, user: customer };
-        }
-      } catch { /* */ }
       return { success: false, error: 'No account found with this email. Please create one.' };
     }
-
-    // Firebase timed out / offline — fall back to local cache
-    console.warn('Firebase Auth unreachable, trying local cache:', code || (err as Error).message);
-  }
-
-  // ── Step 2: Local cache fallback (offline / Firebase disabled) ────────────
-  try {
-    const existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
-    const matched = existingAccounts.find(
-      (a: { email: string }) => a.email && a.email.toLowerCase() === cleanEmail
-    );
-    if (matched) {
-      if (matched.password === password) {
-        const customer: CustomerUser = { uid: matched.uid, email: matched.email, displayName: matched.name || matched.displayName || cleanEmail.split('@')[0] };
-        setLocalCustomer(customer);
-        return { success: true, user: customer };
-      } else {
-        return { success: false, error: 'Invalid password. Please try again.' };
-      }
+    if (code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+      return { success: false, error: 'Invalid email or password. Please try again or create an account.' };
     }
-  } catch { /* ignore */ }
-
-  return { success: false, error: 'Unable to sign in. Please check your connection and try again.' };
+    return { success: false, error: 'Invalid email or password. Please try again.' };
+  }
 }
 
 export async function registerOrLoginWithGoogleData(googleUser: {
