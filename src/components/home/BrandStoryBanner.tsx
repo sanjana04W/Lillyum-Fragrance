@@ -15,7 +15,7 @@ export default function BrandStoryBanner() {
       <div className="container-padded">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           {/* Image collage */}
-          <div className="relative h-80 lg:h-[440px] rounded-3xl overflow-hidden shadow-soft-lg">
+          <div className="relative aspect-[4/3] lg:aspect-auto lg:h-[440px] rounded-3xl overflow-hidden shadow-soft-lg">
             <Image
               src="/images/0f1335e388535d48b99c24c0e4894fc2.jpg"
               alt="Lillyum Fragrance Story"

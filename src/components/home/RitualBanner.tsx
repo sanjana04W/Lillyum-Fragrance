@@ -6,7 +6,7 @@ export default function RitualBanner() {
   return (
     <section className="py-8 sm:py-12 bg-brand-cream">
       <div className="container-padded">
-        <div className="relative rounded-3xl overflow-hidden shadow-card-hover border border-brand-light bg-[#1C1715] text-white min-h-[440px] md:min-h-[500px] flex items-center">
+        <div className="relative rounded-3xl overflow-hidden shadow-card-hover border border-brand-light bg-[#1C1715] text-white min-h-[500px] md:min-h-[500px] flex items-end md:items-center">
           {/* Background Image */}
           <div className="absolute inset-0 z-0">
             <Image
@@ -14,7 +14,7 @@ export default function RitualBanner() {
               alt="The Ritual of Scent"
               fill
               priority
-              className="object-cover object-left md:object-center"
+              className="object-cover object-top md:object-center"
             />
             {/* Elegant Luxury Gradient overlay to guarantee crisp text legibility on the right */}
             <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-transparent via-[#1C1715]/75 md:via-[#1C1715]/85 to-[#1C1715] z-10" />

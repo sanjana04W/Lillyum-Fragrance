@@ -8,7 +8,7 @@ export default function EditorialSpotlight() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 xl:gap-20 items-center">
           {/* Left Column: Layered Luxury Fragrance Imagery */}
           <div className="lg:col-span-6 xl:col-span-7">
-            <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
+            <div className="relative mx-auto w-full max-w-lg lg:max-w-none pb-4 sm:pb-6">
               {/* Main Angled Flacon Image */}
               <div className="relative aspect-[4/3] w-[88%] ml-auto rounded-3xl overflow-hidden shadow-card border border-brand-light bg-brand-ivory group">
                 <Image
@@ -22,7 +22,7 @@ export default function EditorialSpotlight() {
               </div>
 
               {/* Overlapping Inset Bottle Card (Bottom-Left) */}
-              <div className="absolute -bottom-6 left-0 w-[44%] sm:w-[40%] aspect-square rounded-2xl overflow-hidden shadow-card-hover border-2 border-brand-white bg-brand-white z-10">
+              <div className="absolute -bottom-4 sm:-bottom-6 left-0 w-[44%] sm:w-[40%] aspect-square rounded-2xl overflow-hidden shadow-card-hover border-2 border-brand-white bg-brand-white z-10">
                 <Image
                   src="/images/spotlight_inset_1.jpg"
                   alt="Aura Eau de Parfum Iconic Flacon"

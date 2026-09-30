@@ -32,7 +32,7 @@ export default function InstagramFeed() {
               <img
                 src={src}
                 alt={`Instagram post ${i + 1}`}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-brand-charcoal/0 group-hover:bg-brand-charcoal/40 transition-colors duration-300 flex items-center justify-center">
                 <Instagram size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />

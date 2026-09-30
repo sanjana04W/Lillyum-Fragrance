@@ -56,7 +56,7 @@ export default function HeroCarousel() {
 
   return (
     <section
-      className="relative h-[80vh] min-h-[520px] max-h-[760px] overflow-hidden bg-brand-charcoal"
+      className="relative h-[70vw] min-h-[360px] max-h-[520px] sm:h-[80vh] sm:min-h-[520px] sm:max-h-[760px] overflow-hidden bg-brand-charcoal"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -72,7 +72,7 @@ export default function HeroCarousel() {
             fill
             priority={i === 0}
             sizes="100vw"
-            className="object-cover object-center"
+            className="object-cover object-top sm:object-center"
           />
           {/* Gradient overlay — dark left, transparent right */}
           <div className="absolute inset-0 bg-gradient-to-r from-brand-charcoal/90 via-brand-charcoal/55 to-brand-charcoal/10" />

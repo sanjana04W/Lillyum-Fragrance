@@ -62,13 +62,13 @@ export default function CategoryNav() {
         <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {CATEGORIES.map((cat) => (
             <Link key={cat.href} href={cat.href} className="group">
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-brand-ivory mb-2.5 shadow-card group-hover:shadow-card-hover transition-all duration-300">
+              <div className="relative aspect-[3/4] sm:aspect-square rounded-2xl overflow-hidden bg-brand-ivory mb-2.5 shadow-card group-hover:shadow-card-hover transition-all duration-300">
                 <Image
                   src={cat.image}
                   alt={`${cat.label} fragrances`}
                   fill
                   sizes="(max-width:640px) 33vw, (max-width:1024px) 33vw, 16vw"
-                  className="object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="object-cover object-top group-hover:scale-110 transition-transform duration-500"
                 />
                 {/* Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-brand-charcoal/75 via-brand-charcoal/20 to-transparent" />
