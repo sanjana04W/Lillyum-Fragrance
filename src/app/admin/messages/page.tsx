@@ -78,6 +78,15 @@ export default function AdminMessagesPage() {
 
   useEffect(() => {
     fetchInquiries();
+
+    // Auto-refresh when a new inquiry is saved via the contact form (localStorage event)
+    const handleInquiryUpdate = () => {
+      fetchInquiries();
+    };
+    window.addEventListener('lillyum_inquiries_updated', handleInquiryUpdate);
+    return () => {
+      window.removeEventListener('lillyum_inquiries_updated', handleInquiryUpdate);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

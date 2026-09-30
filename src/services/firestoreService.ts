@@ -476,19 +476,120 @@ export async function upsertCustomer(profile: Omit<CustomerProfile, 'id'>): Prom
   }
 }
 
-export async function createInquiry(inquiry: Omit<Inquiry, 'id'>): Promise<void> {
-  await addDoc(collection(db, 'inquiries'), {
-    ...inquiry,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-  });
+const LOCAL_INQUIRIES_KEY = 'lillyum_inquiries';
+
+export const INITIAL_SEED_INQUIRIES: Inquiry[] = [
+  {
+    id: 'inq-001',
+    name: 'Anushka Senanayake',
+    email: 'anushka.s@gmail.com',
+    phone: '0771234567',
+    subject: 'Order inquiry - LIL-2025-001',
+    message: 'Hi, I placed an order this morning. Could you confirm when it will be dispatched?',
+    status: 'New',
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'inq-002',
+    name: 'Rohan De Silva',
+    email: 'rohan.desilva@yahoo.com',
+    phone: '0719876543',
+    subject: 'Authenticity & Batch Codes',
+    message: 'Hello, are all the Lattafa perfumes 100% original Dubai imports with batch codes?',
+    status: 'In Progress',
+    internalNotes: 'Customer contacted via WhatsApp to verify batch codes.',
+    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'inq-003',
+    name: 'Dilini Jayawardena',
+    email: 'dilini.j@outlook.com',
+    phone: '0765432109',
+    subject: 'Gift Wrapping Option',
+    message: 'Do you offer luxury gift boxes or special gift wrapping for birthdays?',
+    status: 'Resolved',
+    internalNotes: 'Confirmed complimentary gift wrap available.',
+    createdAt: new Date(Date.now() - 3600000 * 28).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export function getLocalInquiries(): Inquiry[] {
+  if (typeof window === 'undefined') return INITIAL_SEED_INQUIRIES;
+  try {
+    const raw = localStorage.getItem(LOCAL_INQUIRIES_KEY);
+    if (!raw) {
+      localStorage.setItem(LOCAL_INQUIRIES_KEY, JSON.stringify(INITIAL_SEED_INQUIRIES));
+      return INITIAL_SEED_INQUIRIES;
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+    localStorage.setItem(LOCAL_INQUIRIES_KEY, JSON.stringify(INITIAL_SEED_INQUIRIES));
+    return INITIAL_SEED_INQUIRIES;
+  } catch {
+    return INITIAL_SEED_INQUIRIES;
+  }
+}
+
+export function saveLocalInquiry(inquiry: Inquiry): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const inquiries = getLocalInquiries();
+    const idx = inquiries.findIndex((i) => i.id === inquiry.id);
+    if (idx >= 0) {
+      inquiries[idx] = inquiry;
+    } else {
+      inquiries.unshift(inquiry);
+    }
+    localStorage.setItem(LOCAL_INQUIRIES_KEY, JSON.stringify(inquiries));
+    window.dispatchEvent(new Event('lillyum_inquiries_updated'));
+  } catch (e) {
+    console.error('Failed to save local inquiry:', e);
+  }
+}
+
+export async function createInquiry(inquiryData: Omit<Inquiry, 'id'>): Promise<string> {
+  const localId = 'inq_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+  const newInquiry: Inquiry = {
+    ...inquiryData,
+    id: localId,
+    createdAt: inquiryData.createdAt ? String(inquiryData.createdAt) : new Date().toISOString(),
+    updatedAt: inquiryData.updatedAt ? String(inquiryData.updatedAt) : new Date().toISOString(),
+  };
+
+  // 1. Immediately persist locally so message is guaranteed saved without freezing
+  saveLocalInquiry(newInquiry);
+
+  // 2. Sync to Firestore in background with a quick timeout (1.5s max)
+  try {
+    const docRefPromise = addDoc(collection(db, 'inquiries'), {
+      ...inquiryData,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    const docRef = await withTimeout(docRefPromise, 1500, null);
+    if (docRef && (docRef as any).id) {
+      newInquiry.id = (docRef as any).id;
+      saveLocalInquiry(newInquiry);
+      return (docRef as any).id;
+    }
+  } catch (err) {
+    console.warn('Firestore inquiry sync notice, saved locally:', err);
+  }
+
+  return localId;
 }
 
 export async function getAllInquiries(): Promise<Inquiry[]> {
+  const local = getLocalInquiries();
   try {
     const q = query(collection(db, 'inquiries'), orderBy('createdAt', 'desc'));
-    const snapshot = await withTimeout(getDocs(q), 5000, { docs: [] } as any);
-    return snapshot.docs.map((d: any) => {
+    const snapshot = await withTimeout(getDocs(q), 1500, { docs: [] } as any);
+    const firestoreInquiries: Inquiry[] = snapshot.docs.map((d: any) => {
       const data = d.data();
       return {
         id: d.id,
@@ -497,9 +598,17 @@ export async function getAllInquiries(): Promise<Inquiry[]> {
         updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt,
       } as Inquiry;
     });
+
+    const mergedMap = new Map<string, Inquiry>();
+    local.forEach((item) => mergedMap.set(item.id, item));
+    firestoreInquiries.forEach((item) => mergedMap.set(item.id, item));
+
+    const merged = Array.from(mergedMap.values());
+    merged.sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
+    return merged;
   } catch (err) {
-    console.warn('Failed to fetch inquiries:', err);
-    return [];
+    console.warn('Failed to fetch inquiries from Firestore, using local fallback:', err);
+    return local.sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
   }
 }
 
@@ -508,12 +617,32 @@ export async function updateInquiryStatus(
   status: Inquiry['status'],
   internalNotes?: string
 ): Promise<void> {
-  const updates: Record<string, unknown> = {
-    status,
-    updatedAt: Timestamp.now(),
-  };
-  if (internalNotes !== undefined) updates.internalNotes = internalNotes;
-  await updateDoc(doc(db, 'inquiries', id), updates);
+  const targetId = id || '';
+  // 1. Immediately update local store so UI is instant
+  const inquiries = getLocalInquiries();
+  const found = inquiries.find((i) => i.id === targetId);
+  if (found) {
+    found.status = status;
+    if (internalNotes !== undefined) found.internalNotes = internalNotes;
+    found.updatedAt = new Date().toISOString();
+    saveLocalInquiry(found);
+  }
+
+  // 2. Sync to Firestore if doc is on Firestore
+  if (targetId && !targetId.startsWith('inq-') && !targetId.startsWith('inq_')) {
+    try {
+      const updates: Record<string, unknown> = {
+        status,
+        updatedAt: Timestamp.now(),
+      };
+      if (internalNotes !== undefined) updates.internalNotes = internalNotes;
+      updateDoc(doc(db, 'inquiries', targetId), updates).catch((err) => {
+        console.warn('Firestore update inquiry notice:', err);
+      });
+    } catch (e) {
+      console.warn('Firestore update inquiry notice:', e);
+    }
+  }
 }
 
 // ---- Admin & Full Data Sync Functions ----

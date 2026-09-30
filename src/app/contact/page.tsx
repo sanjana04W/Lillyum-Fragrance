@@ -6,8 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { STORE_PHONE, STORE_EMAIL, STORE_ADDRESS, SOCIAL_LINKS, WHATSAPP_NUMBER } from '@/lib/constants';
 import { getWhatsAppLink } from '@/lib/utils';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { createInquiry } from '@/services/firestoreService';
 import toast from 'react-hot-toast';
 
 const EMPTY_FORM = { name: '', email: '', phone: '', subject: '', message: '' };
@@ -20,8 +19,11 @@ function validateForm(form: typeof EMPTY_FORM) {
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
     errors.email = 'Please enter a valid email address.';
   }
-  if (!form.message.trim()) errors.message = 'Message is required.';
-  else if (form.message.trim().length < 10) errors.message = 'Message must be at least 10 characters.';
+  if (!form.message.trim()) {
+    errors.message = 'Message is required.';
+  } else if (form.message.trim().length < 3) {
+    errors.message = 'Please enter at least 3 characters.';
+  }
   return errors;
 }
 
@@ -51,7 +53,9 @@ export default function ContactPage() {
     const validationErrors = validateForm(form);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      toast.error('Please fix the errors below before sending.');
+      if (validationErrors.name) toast.error(validationErrors.name);
+      else if (validationErrors.email) toast.error(validationErrors.email);
+      else if (validationErrors.message) toast.error(validationErrors.message);
       return;
     }
 
@@ -60,15 +64,15 @@ export default function ContactPage() {
     setErrors({});
 
     try {
-      await addDoc(collection(db, 'inquiries'), {
+      await createInquiry({
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim() || null,
+        phone: form.phone.trim() || undefined,
         subject: form.subject.trim() || 'General Inquiry',
         message: form.message.trim(),
         status: 'New',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
 
       setSubmitted(true);
