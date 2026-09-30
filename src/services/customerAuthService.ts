@@ -55,53 +55,7 @@ export async function registerCustomer(
   const cleanName = name.trim();
   const cleanPhone = phone?.trim() || '';
 
-  // ── Step 1: Try Firebase Auth first (primary cross-device store) ──────────
-  try {
-    const firebaseRegisterPromise = createUserWithEmailAndPassword(auth, cleanEmail, password);
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT')), 5000)
-    );
-
-    const cred = await Promise.race([firebaseRegisterPromise, timeoutPromise]);
-    const firebaseUid = cred.user.uid;
-
-    // Update Firebase Auth display name
-    try { await updateProfile(cred.user, { displayName: cleanName }); } catch { /* ignore */ }
-
-    // Write user profile to Firestore
-    try {
-      await setDoc(doc(db, 'users', firebaseUid), {
-        name: cleanName,
-        displayName: cleanName,
-        email: cleanEmail,
-        phone: cleanPhone || null,
-        createdAt: new Date().toISOString(),
-      }, { merge: true });
-    } catch { /* ignore Firestore failure */ }
-
-    // Cache locally using the Firebase UID
-    const customer: CustomerUser = { uid: firebaseUid, email: cleanEmail, displayName: cleanName };
-
-    let accs: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = [];
-    try { accs = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]'); } catch { /* */ }
-    if (!accs.some((a) => a.email?.toLowerCase() === cleanEmail)) {
-      accs.push({ uid: firebaseUid, name: cleanName, displayName: cleanName, email: cleanEmail, password, phone: cleanPhone, createdAt: new Date().toISOString() });
-      try { localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(accs)); } catch { /* */ }
-    }
-
-    setLocalCustomer(customer);
-    return { success: true, user: customer };
-
-  } catch (err: unknown) {
-    const code = (err as { code?: string })?.code || '';
-    if (code === 'auth/email-already-in-use') {
-      return { success: false, error: 'This email is already registered. Try signing in.' };
-    }
-    // Firebase unreachable — fall back to local-only registration
-    console.warn('Firebase Auth unavailable, registering locally:', code || (err as Error).message);
-  }
-
-  // ── Step 2: Local-only fallback (offline / Firebase disabled) ─────────────
+  // ── Step 1: Save to localStorage IMMEDIATELY (instant, never fails) ────────
   let existingAccounts: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = [];
   try { existingAccounts = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]'); } catch { existingAccounts = []; }
 
@@ -109,14 +63,51 @@ export async function registerCustomer(
     return { success: false, error: 'This email is already registered. Try signing in.' };
   }
 
-  const uid = 'cust_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-  existingAccounts.push({ uid, name: cleanName, displayName: cleanName, email: cleanEmail, password, phone: cleanPhone, createdAt: new Date().toISOString() });
+  // Use a temporary local UID (may be replaced by Firebase UID below)
+  const localUid = 'cust_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+  existingAccounts.push({ uid: localUid, name: cleanName, displayName: cleanName, email: cleanEmail, password, phone: cleanPhone, createdAt: new Date().toISOString() });
   try { localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(existingAccounts)); } catch { /* */ }
 
-  const customer: CustomerUser = { uid, email: cleanEmail, displayName: cleanName };
-  setLocalCustomer(customer);
-  return { success: true, user: customer };
+  const localCustomer: CustomerUser = { uid: localUid, email: cleanEmail, displayName: cleanName };
+  setLocalCustomer(localCustomer);
+
+  // ── Step 2: Try Firebase Auth in background (non-blocking for UI) ──────────
+  // Fire-and-forget: if it succeeds, update local record with Firebase UID
+  createUserWithEmailAndPassword(auth, cleanEmail, password)
+    .then(async (cred) => {
+      const firebaseUid = cred.user.uid;
+      // Update display name
+      try { await updateProfile(cred.user, { displayName: cleanName }); } catch { /* */ }
+      // Sync profile to Firestore (non-blocking)
+      setDoc(doc(db, 'users', firebaseUid), {
+        name: cleanName, displayName: cleanName, email: cleanEmail,
+        phone: cleanPhone || null, createdAt: new Date().toISOString(),
+      }, { merge: true }).catch(() => { /* ignore Firestore failure */ });
+      // Update local cache with the real Firebase UID
+      try {
+        const accs: Array<{ uid: string; name: string; displayName: string; email: string; password?: string; phone?: string; createdAt: string }> = JSON.parse(localStorage.getItem(CUSTOMERS_KEY) || '[]');
+        const idx = accs.findIndex((a) => a.uid === localUid || a.email?.toLowerCase() === cleanEmail);
+        if (idx >= 0) { accs[idx] = { ...accs[idx], uid: firebaseUid }; }
+        localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(accs));
+        // Update current session with Firebase UID
+        const cur = getLocalCustomer();
+        if (cur && cur.uid === localUid) setLocalCustomer({ ...cur, uid: firebaseUid });
+      } catch { /* */ }
+    })
+    .catch((err: { code?: string }) => {
+      if (err?.code === 'auth/email-already-in-use') {
+        // Another device already registered this email — that's fine, local record is valid
+        console.info('Firebase: email already in use — local account valid');
+      } else {
+        // Firebase unavailable — local account still works on this device
+        console.warn('Firebase Auth registration failed (local account saved):', err?.code);
+      }
+    });
+
+  // ── Return success immediately — don't wait for Firebase ─────────────────
+  return { success: true, user: localCustomer };
 }
+
 
 export async function loginCustomer(
   email: string,
