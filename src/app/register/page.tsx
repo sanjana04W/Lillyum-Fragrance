@@ -336,37 +336,51 @@ function RegisterForm() {
 
               {/* Terms checkbox */}
               <div className="space-y-1 pt-1">
-                <label className="flex items-start gap-3 cursor-pointer group select-none">
-                  <div className="relative mt-0.5 shrink-0">
+                <label htmlFor="terms-agreement" className="flex items-start gap-3 cursor-pointer group select-none">
+                  <div className="relative mt-0.5 shrink-0 flex items-center justify-center">
                     <input
+                      id="terms-agreement"
                       type="checkbox"
                       checked={agreed}
                       onChange={(e) => {
                         setAgreed(e.target.checked);
-                        if (errors.agreed) setErrors({ ...errors, agreed: undefined });
+                        if (errors.agreed) setErrors((prev) => ({ ...prev, agreed: undefined }));
                       }}
-                      className="sr-only peer"
+                      className="sr-only"
                     />
                     <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAgreed(!agreed);
-                        if (errors.agreed) setErrors({ ...errors, agreed: undefined });
-                      }}
                       className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center cursor-pointer ${
                         agreed
                           ? 'bg-brand-gold border-brand-gold text-white shadow-xs'
-                          : 'border-brand-mid/40 bg-brand-white group-hover:border-brand-gold'
+                          : errors.agreed
+                            ? 'border-red-400 bg-red-50/40'
+                            : 'border-brand-mid/40 bg-brand-white group-hover:border-brand-gold'
                       }`}
                     >
-                      {agreed && <CheckCircle2 size={13} className="text-white" />}
+                      {agreed && <CheckCircle2 size={13} className="text-white stroke-[2.5]" />}
                     </div>
                   </div>
                   <span className="text-xs text-brand-mid leading-relaxed pt-0.5">
                     I agree to the{' '}
-                    <Link href="/policies/terms" className="text-brand-gold hover:text-brand-gold-dark underline font-medium">Terms of Service</Link>
+                    <Link
+                      href="/policies/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-brand-gold hover:text-brand-gold-dark underline font-medium"
+                    >
+                      Terms of Service
+                    </Link>
                     {' '}and{' '}
-                    <Link href="/policies/privacy" className="text-brand-gold hover:text-brand-gold-dark underline font-medium">Privacy Policy</Link>.
+                    <Link
+                      href="/policies/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-brand-gold hover:text-brand-gold-dark underline font-medium"
+                    >
+                      Privacy Policy
+                    </Link>.
                   </span>
                 </label>
                 {errors.agreed && <p className="text-xs text-red-500 font-medium">{errors.agreed}</p>}
