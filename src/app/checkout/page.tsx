@@ -15,7 +15,7 @@ import { generateOrderId, formatPrice } from '@/lib/utils';
 import { getDeliveryFee as getZoneFee, ALL_DISTRICTS } from '@/lib/constants';
 import { Order } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { getCustomerAccountDetails } from '@/services/customerAuthService';
+import { getCustomerAccountDetails, setLocalCustomer, getLocalCustomer, CustomerUser } from '@/services/customerAuthService';
 import { LogIn, CheckCircle2, ShieldCheck, RefreshCw, Loader2 } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -265,8 +265,59 @@ export default function CheckoutPage() {
         price: item.price, salePrice: item.salePrice, quantity: item.quantity,
         subtotal: (item.salePrice ?? item.price) * item.quantity,
       }));
+
+      const customerEmail = pendingFormData.email.trim().toLowerCase();
+      const customerName = pendingFormData.name.trim();
+      const customerPhone = pendingFormData.phone?.trim() || '';
+
+      // Ensure customer account and session persist so My Profile is immediately accessible
+      let customerUid = user?.uid;
+      try {
+        const existingAccounts = JSON.parse(localStorage.getItem('lillyum_customer_accounts') || '[]');
+        let matched = existingAccounts.find(
+          (a: { email?: string; uid?: string }) => a.email && a.email.toLowerCase() === customerEmail
+        );
+        if (!customerUid) {
+          customerUid = matched?.uid || 'cust_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        }
+
+        if (matched) {
+          matched.name = customerName || matched.name;
+          matched.displayName = customerName || matched.displayName;
+          if (customerPhone) matched.phone = customerPhone;
+          if (pendingFormData.address) matched.address = pendingFormData.address;
+          if (pendingFormData.city) matched.city = pendingFormData.city;
+          if (pendingFormData.district) matched.district = pendingFormData.district;
+        } else {
+          matched = {
+            uid: customerUid,
+            name: customerName,
+            displayName: customerName,
+            email: customerEmail,
+            phone: customerPhone,
+            address: pendingFormData.address,
+            city: pendingFormData.city,
+            district: pendingFormData.district,
+            createdAt: new Date().toISOString(),
+          };
+          existingAccounts.push(matched);
+        }
+        localStorage.setItem('lillyum_customer_accounts', JSON.stringify(existingAccounts));
+
+        // Always keep the customer authenticated so they remain logged in
+        const activeCustomer: CustomerUser = {
+          uid: customerUid ?? ('cust_' + Date.now()),
+          email: customerEmail,
+          displayName: customerName || user?.displayName || 'Customer',
+        };
+        setLocalCustomer(activeCustomer);
+      } catch (e) {
+        console.error('Failed to sync customer account:', e);
+      }
+
       const order: Omit<Order, 'id'> = {
         orderId,
+        customerId: customerUid,
         customer: {
           name: pendingFormData.name, email: pendingFormData.email, phone: pendingFormData.phone,
           address: pendingFormData.address, city: pendingFormData.city, district: pendingFormData.district,
@@ -296,8 +347,8 @@ export default function CheckoutPage() {
         city: pendingFormData.city, phone: pendingFormData.phone,
       });
 
-      // Navigate reliably to order confirmation page
-      window.location.href = `/order-confirmation?${params.toString()}`;
+      // Navigate to order confirmation page
+      router.push(`/order-confirmation?${params.toString()}`);
     } catch (err) {
       console.error(err);
       toast.error('Failed to place order. Please try again or contact us via WhatsApp.');

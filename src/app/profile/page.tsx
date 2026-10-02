@@ -7,8 +7,10 @@ import { useAuth } from '@/context/AuthContext';
 import {
   getCustomerAccountDetails,
   updateCustomerAccountDetails,
+  getLocalCustomer,
   CustomerAccountDetails,
 } from '@/services/customerAuthService';
+import { getLocalOrders } from '@/services/firestoreService';
 import { Order } from '@/types';
 import { ALL_DISTRICTS } from '@/lib/constants';
 import { formatPrice } from '@/lib/utils';
@@ -54,39 +56,61 @@ function ProfileContent() {
   useEffect(() => {
     if (authLoading) return;
 
-    if (!user) {
+    const activeUser = user || getLocalCustomer();
+    if (!activeUser) {
       router.push('/login?redirect=/profile');
       return;
     }
 
-    const email = user.email || '';
-    const details = getCustomerAccountDetails(user.uid || email);
+    const email = (activeUser.email || '').toLowerCase().trim();
+    const details = getCustomerAccountDetails(activeUser.uid || email);
     setProfile(details);
 
-    // Load customer orders from localStorage
-    let customerOrders: Order[] = [];
-    try {
-      const allOrders: Order[] = JSON.parse(localStorage.getItem('lillyum_orders') || '[]');
-      customerOrders = allOrders.filter(
-        (o) => o.customer?.email?.toLowerCase().trim() === email.toLowerCase().trim()
-      );
-    } catch {
-      customerOrders = [];
-    }
+    const phone = (details?.phone || '').trim().replace(/[\s-]/g, '');
+    const uid = activeUser.uid || '';
+
+    const filterOrders = () => {
+      try {
+        const allOrders: Order[] = getLocalOrders();
+        return allOrders.filter((o) => {
+          const orderEmail = (o.customer?.email || '').toLowerCase().trim();
+          const orderPhone = (o.customer?.phone || '').trim().replace(/[\s-]/g, '');
+          return (
+            (email && orderEmail === email) ||
+            (phone && orderPhone && orderPhone === phone) ||
+            (uid && o.customerId === uid)
+          );
+        });
+      } catch {
+        return [];
+      }
+    };
+
+    const customerOrders = filterOrders();
     setOrders(customerOrders);
 
     // Populate initial settings form
     const mostRecentOrder = customerOrders[0];
     setSettingsForm({
-      name: details?.name || details?.displayName || user.displayName || '',
+      name: details?.name || details?.displayName || activeUser.displayName || '',
       phone: details?.phone || mostRecentOrder?.customer?.phone || '',
       address: details?.address || mostRecentOrder?.customer?.address || '',
       city: details?.city || mostRecentOrder?.customer?.city || '',
       district: details?.district || mostRecentOrder?.customer?.district || 'Colombo',
     });
+
+    const handleOrdersUpdated = () => {
+      setOrders(filterOrders());
+    };
+    window.addEventListener('lillyum_orders_updated', handleOrdersUpdated);
+    return () => {
+      window.removeEventListener('lillyum_orders_updated', handleOrdersUpdated);
+    };
   }, [user, authLoading, router]);
 
-  if (authLoading || (!user && typeof window !== 'undefined')) {
+  const activeUser = user || (typeof window !== 'undefined' ? getLocalCustomer() : null);
+
+  if ((authLoading && !activeUser) || (!activeUser && typeof window !== 'undefined')) {
     return (
       <div className="min-h-screen bg-brand-cream flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-brand-gold border-t-transparent rounded-full" />
@@ -94,8 +118,8 @@ function ProfileContent() {
     );
   }
 
-  const displayName = profile?.name || profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Customer';
-  const displayEmail = user?.email || profile?.email || '';
+  const displayName = profile?.name || profile?.displayName || activeUser?.displayName || activeUser?.email?.split('@')[0] || 'Customer';
+  const displayEmail = activeUser?.email || profile?.email || '';
   const firstInitial = displayName.charAt(0).toUpperCase() || 'C';
 
   // Calculate metrics
@@ -122,11 +146,11 @@ function ProfileContent() {
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!activeUser) return;
     setSavingSettings(true);
 
-    const email = user.email || '';
-    const success = updateCustomerAccountDetails(user.uid || email, {
+    const email = activeUser.email || '';
+    const success = updateCustomerAccountDetails(activeUser.uid || email, {
       name: settingsForm.name,
       displayName: settingsForm.name,
       phone: settingsForm.phone,
@@ -141,7 +165,7 @@ function ProfileContent() {
         toast.success('Profile updated successfully!', {
           style: { background: '#FAF7F2', color: '#1C1C1E', border: '1px solid #B8892A' },
         });
-        const updated = getCustomerAccountDetails(user.uid || email);
+        const updated = getCustomerAccountDetails(activeUser.uid || email);
         setProfile(updated);
         setActiveTab('overview');
       } else {

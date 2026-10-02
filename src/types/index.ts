@@ -113,6 +113,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderId: string; // human-readable: LF-YYYYMMDD-XXXX
+  customerId?: string;
   customer: CustomerDetails;
   items: OrderItem[];
   subtotal: number;

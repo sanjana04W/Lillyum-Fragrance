@@ -302,6 +302,7 @@ function saveLocalOrder(order: Order) {
       orders.unshift(order);
     }
     localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(orders));
+    window.dispatchEvent(new Event('lillyum_orders_updated'));
   } catch (e) {
     console.error('Failed to save local order:', e);
   }
@@ -314,18 +315,27 @@ export async function createOrder(orderData: Omit<Order, 'id'>): Promise<string>
     id: localId,
   };
 
+  // 1. Save locally IMMEDIATELY so it is always present in order history
+  saveLocalOrder(newOrder);
+
+  // 2. Sync to Firestore with a 2.5s timeout protection
   try {
-    const docRef = await addDoc(collection(db, 'orders'), {
+    const firestorePromise = addDoc(collection(db, 'orders'), {
       ...orderData,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-    newOrder.id = docRef.id;
-    saveLocalOrder(newOrder);
-    return docRef.id;
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500));
+    const docRef = await Promise.race([firestorePromise, timeoutPromise]);
+
+    if (docRef && docRef.id) {
+      newOrder.id = docRef.id;
+      saveLocalOrder(newOrder);
+      return docRef.id;
+    }
+    return localId;
   } catch (err) {
-    console.warn('Firestore unavailable, saving order to local store:', err);
-    saveLocalOrder(newOrder);
+    console.warn('Firestore unavailable, saved order to local store:', err);
     return localId;
   }
 }
