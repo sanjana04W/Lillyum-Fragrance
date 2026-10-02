@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Menu, X, ChevronDown, Phone, User, LogOut, LayoutGrid } from 'lucide-react';
+import { ShoppingCart, Menu, X, ChevronDown, Phone, User, UserPlus, LogOut, LayoutGrid } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { SOCIAL_LINKS } from '@/lib/constants';
 import { useAuth } from '@/context/AuthContext';
@@ -44,9 +44,24 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const accountDropdownRef = useRef<HTMLDivElement>(null);
   const { getItemCount, openCart } = useCartStore();
   const itemCount = getItemCount();
   const { user, signOut } = useAuth();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    if (accountOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [accountOpen]);
 
   useEffect(() => {
     setMounted(true);
@@ -232,76 +247,67 @@ export default function Header() {
                 <span>0752 369 613</span>
               </a>
 
-              {/* Account */}
-              <div className="relative">
-                <button
-                  onClick={() => setAccountOpen(!accountOpen)}
-                  onBlur={() => setTimeout(() => setAccountOpen(false), 150)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 ${
-                    user
-                      ? 'text-brand-gold bg-brand-gold-soft hover:bg-brand-gold/20'
-                      : 'text-brand-mid hover:text-brand-gold hover:bg-brand-gold-soft'
-                  }`}
-                  aria-label="Account"
-                >
-                  {user ? (
+              {/* Account / Sign In / Sign Up */}
+              {user ? (
+                <div className="relative" ref={accountDropdownRef}>
+                  <button
+                    onClick={() => setAccountOpen(!accountOpen)}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-brand-gold bg-brand-gold-soft hover:bg-brand-gold/20 transition-all cursor-pointer"
+                    aria-label="Account menu"
+                  >
                     <span className="w-7 h-7 rounded-full bg-brand-gold text-white text-xs font-bold flex items-center justify-center">
                       {(user.displayName || user.email || 'U')[0].toUpperCase()}
                     </span>
-                  ) : (
-                    <User size={19} />
+                    <span className="hidden sm:inline text-xs font-semibold text-brand-charcoal max-w-[100px] truncate">
+                      {user.displayName || 'Account'}
+                    </span>
+                    <ChevronDown size={13} className={`text-brand-mid transition-transform duration-200 ${accountOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {accountOpen && (
+                    <div className="absolute top-full right-0 mt-2 w-52 bg-brand-white border border-brand-light rounded-2xl shadow-card-hover py-2 z-50 animate-fade-in">
+                      <div className="px-4 py-2 border-b border-brand-light mb-1">
+                        <p className="text-xs font-semibold text-brand-charcoal truncate">
+                          {user.displayName || 'My Account'}
+                        </p>
+                        <p className="text-[11px] text-brand-mid truncate">{user.email}</p>
+                      </div>
+                      <Link
+                        href="/profile"
+                        onClick={() => setAccountOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
+                      >
+                        <LayoutGrid size={14} />
+                        My Profile
+                      </Link>
+                      <div className="border-t border-brand-light mx-3 my-1" />
+                      <button
+                        onClick={() => { signOut(); setAccountOpen(false); }}
+                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        <LogOut size={14} />
+                        Sign Out
+                      </button>
+                    </div>
                   )}
-                </button>
-                {accountOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-52 bg-brand-white border border-brand-light rounded-2xl shadow-card-hover py-2 z-50 animate-fade-in">
-                    {user ? (
-                      <>
-                        <div className="px-4 py-2 border-b border-brand-light mb-1">
-                          <p className="text-xs font-semibold text-brand-charcoal truncate">
-                            {user.displayName || 'My Account'}
-                          </p>
-                          <p className="text-[11px] text-brand-mid truncate">{user.email}</p>
-                        </div>
-                        <Link
-                          href="/profile"
-                          onClick={() => setAccountOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
-                        >
-                          <LayoutGrid size={14} />
-                          My Profile
-                        </Link>
-                        <div className="border-t border-brand-light mx-3 my-1" />
-                        <button
-                          onClick={() => { signOut(); setAccountOpen(false); }}
-                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <LogOut size={14} />
-                          Sign Out
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <Link
-                          href="/login"
-                          onClick={() => setAccountOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
-                        >
-                          <User size={14} />
-                          Sign In
-                        </Link>
-                        <div className="border-t border-brand-light mx-3 my-1" />
-                        <Link
-                          href="/register"
-                          onClick={() => setAccountOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-brand-dark hover:text-brand-gold hover:bg-brand-gold-soft transition-colors"
-                        >
-                          Create Account
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Link
+                    href="/login"
+                    className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-brand-charcoal hover:text-brand-gold transition-colors px-2.5 py-2 rounded-xl hover:bg-brand-gold-soft"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 sm:px-3.5 py-2 rounded-xl bg-brand-gold hover:bg-brand-gold-dark text-white shadow-gold transition-all duration-200"
+                    aria-label="Sign Up"
+                  >
+                    <UserPlus size={14} />
+                    <span>Sign Up</span>
+                  </Link>
+                </div>
+              )}
 
               {/* Cart */}
               <button
@@ -448,20 +454,22 @@ export default function Header() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-1">
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-brand-charcoal hover:text-brand-gold hover:bg-brand-gold-soft rounded-xl transition-colors"
-                >
-                  <User size={14} /> Sign In
-                </Link>
+              <div className="space-y-2">
                 <Link
                   href="/register"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-brand-charcoal hover:text-brand-gold hover:bg-brand-gold-soft rounded-xl transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold text-white bg-brand-gold hover:bg-brand-gold-dark rounded-xl shadow-gold transition-all"
                 >
-                  <User size={14} /> Create Account
+                  <UserPlus size={15} />
+                  <span>Sign Up</span>
+                </Link>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-brand-charcoal hover:text-brand-gold hover:bg-brand-gold-soft rounded-xl transition-colors"
+                >
+                  <User size={14} />
+                  <span>Already have an account? Sign In</span>
                 </Link>
               </div>
             )}
