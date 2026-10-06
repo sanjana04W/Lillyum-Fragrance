@@ -291,10 +291,10 @@ export default function Header() {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
                   <Link
                     href="/login"
-                    className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-brand-charcoal hover:text-brand-gold transition-colors px-2.5 py-2 rounded-xl hover:bg-brand-gold-soft"
+                    className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 sm:px-3.5 py-2 rounded-xl border border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white transition-all duration-200"
                   >
                     Sign In
                   </Link>
@@ -466,10 +466,10 @@ export default function Header() {
                 <Link
                   href="/login"
                   onClick={() => setMobileOpen(false)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-brand-charcoal hover:text-brand-gold hover:bg-brand-gold-soft rounded-xl transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold text-brand-gold border border-brand-gold hover:bg-brand-gold hover:text-white rounded-xl transition-all duration-200"
                 >
                   <User size={14} />
-                  <span>Already have an account? Sign In</span>
+                  <span>Sign In</span>
                 </Link>
               </div>
             )}

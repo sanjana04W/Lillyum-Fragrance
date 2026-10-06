@@ -341,16 +341,33 @@ export async function createOrder(orderData: Omit<Order, 'id'>): Promise<string>
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
+  // 1. Try local first (fast, works offline) — match by either doc id or orderId
+  const localMatch = getLocalOrders().find((o) => o.id === id || o.orderId === id);
+  if (localMatch) return localMatch;
+
+  // 2. Try Firestore by document ID
   try {
     const d = await getDoc(doc(db, 'orders', id));
     if (d.exists()) {
       return { id: d.id, ...d.data() } as Order;
     }
   } catch {
-    // fallback
+    // fallback to orderId query
   }
-  const local = getLocalOrders().find((o) => o.id === id || o.orderId === id);
-  return local || null;
+
+  // 3. Try Firestore by orderId field
+  try {
+    const q = query(collection(db, 'orders'), where('orderId', '==', id), limit(1));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const d = snap.docs[0];
+      return { id: d.id, ...d.data() } as Order;
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
 }
 
 export async function getOrderByOrderId(orderId: string): Promise<Order | null> {

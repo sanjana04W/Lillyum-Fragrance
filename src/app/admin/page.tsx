@@ -104,8 +104,8 @@ export default function AdminDashboard() {
               <div className="divide-y divide-brand-light">
                 {pendingOrders.slice(0, 5).map((order) => (
                   <Link
-                    key={order.id}
-                    href={`/admin/orders/${order.id}`}
+                    key={order.orderId}
+                    href={`/admin/orders/${encodeURIComponent(order.orderId)}`}
                     className="flex items-center justify-between px-5 py-3 hover:bg-brand-cream transition-colors"
                   >
                     <div>
