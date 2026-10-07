@@ -10,7 +10,7 @@ import {
   getLocalCustomer,
   CustomerAccountDetails,
 } from '@/services/customerAuthService';
-import { getLocalOrders } from '@/services/firestoreService';
+import { getUserOrders } from '@/services/firestoreService';
 import { Order } from '@/types';
 import { ALL_DISTRICTS } from '@/lib/constants';
 import { formatPrice } from '@/lib/utils';
@@ -52,6 +52,8 @@ function ProfileContent() {
     district: 'Colombo',
   });
 
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
   // Load profile and orders
   useEffect(() => {
     if (authLoading) return;
@@ -69,38 +71,33 @@ function ProfileContent() {
     const phone = (details?.phone || '').trim().replace(/[\s-]/g, '');
     const uid = activeUser.uid || '';
 
-    const filterOrders = () => {
-      try {
-        const allOrders: Order[] = getLocalOrders();
-        return allOrders.filter((o) => {
-          const orderEmail = (o.customer?.email || '').toLowerCase().trim();
-          const orderPhone = (o.customer?.phone || '').trim().replace(/[\s-]/g, '');
-          return (
-            (email && orderEmail === email) ||
-            (phone && orderPhone && orderPhone === phone) ||
-            (uid && o.customerId === uid)
-          );
-        });
-      } catch {
-        return [];
-      }
-    };
+    // ── Async multi-source order load ──────────────────────────────────────
+    setOrdersLoading(true);
+    getUserOrders({ email, uid, phone }).then((fetchedOrders) => {
+      setOrders(fetchedOrders);
+      // Populate settings form from profile + most recent order
+      const mostRecentOrder = fetchedOrders[0];
+      setSettingsForm({
+        name: details?.name || details?.displayName || activeUser.displayName || '',
+        phone: details?.phone || mostRecentOrder?.customer?.phone || '',
+        address: details?.address || mostRecentOrder?.customer?.address || '',
+        city: details?.city || mostRecentOrder?.customer?.city || '',
+        district: details?.district || mostRecentOrder?.customer?.district || 'Colombo',
+      });
+      setOrdersLoading(false);
+    }).catch(() => setOrdersLoading(false));
 
-    const customerOrders = filterOrders();
-    setOrders(customerOrders);
-
-    // Populate initial settings form
-    const mostRecentOrder = customerOrders[0];
+    // Populate settings form immediately from profile (before async finishes)
     setSettingsForm({
       name: details?.name || details?.displayName || activeUser.displayName || '',
-      phone: details?.phone || mostRecentOrder?.customer?.phone || '',
-      address: details?.address || mostRecentOrder?.customer?.address || '',
-      city: details?.city || mostRecentOrder?.customer?.city || '',
-      district: details?.district || mostRecentOrder?.customer?.district || 'Colombo',
+      phone: details?.phone || '',
+      address: details?.address || '',
+      city: details?.city || '',
+      district: details?.district || 'Colombo',
     });
 
     const handleOrdersUpdated = () => {
-      setOrders(filterOrders());
+      getUserOrders({ email, uid, phone }).then(setOrders).catch(() => {});
     };
     window.addEventListener('lillyum_orders_updated', handleOrdersUpdated);
     return () => {
@@ -480,7 +477,12 @@ function ProfileContent() {
                   </span>
                 </div>
 
-                {orders.length === 0 ? (
+                {ordersLoading ? (
+                  <div className="flex items-center justify-center py-12 gap-3">
+                    <div className="animate-spin w-6 h-6 border-2 border-brand-gold border-t-transparent rounded-full" />
+                    <span className="text-sm text-brand-mid">Loading your orders…</span>
+                  </div>
+                ) : orders.length === 0 ? (
                   <div className="text-center py-12 space-y-4">
                     <div className="w-16 h-16 rounded-2xl bg-brand-gold-soft text-brand-gold flex items-center justify-center mx-auto">
                       <ShoppingBag size={28} />

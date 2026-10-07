@@ -302,6 +302,20 @@ function saveLocalOrder(order: Order) {
       orders.unshift(order);
     }
     localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(orders));
+
+    // ── Per-user email index ─────────────────────────────────────────────────
+    // Store the orderId under a per-email key so orders survive logout/re-login.
+    const email = order.customer?.email?.toLowerCase().trim();
+    if (email) {
+      const emailKey = `lillyum_orders_${email}`;
+      let emailIndex: string[] = [];
+      try { emailIndex = JSON.parse(localStorage.getItem(emailKey) || '[]'); } catch { /* */ }
+      if (!emailIndex.includes(order.orderId)) {
+        emailIndex.unshift(order.orderId);
+        localStorage.setItem(emailKey, JSON.stringify(emailIndex));
+      }
+    }
+
     window.dispatchEvent(new Event('lillyum_orders_updated'));
   } catch (e) {
     console.error('Failed to save local order:', e);
@@ -383,6 +397,86 @@ export async function getOrderByOrderId(orderId: string): Promise<Order | null> 
   }
   const local = getLocalOrders().find((o) => o.orderId === orderId);
   return local || null;
+}
+
+/**
+ * getUserOrders — robust, multi-source order retrieval for My Profile.
+ *
+ * Sources (in priority order):
+ *  1. Per-email localStorage index  → orderIds → look up in full local orders list
+ *  2. Full local orders list scan   → match by email / phone / customerId
+ *  3. Firestore query by email      → fetched with 2.5 s timeout, cached locally
+ *
+ * Results from all sources are merged and deduplicated by orderId.
+ * Newly found Firestore orders are saved to localStorage so they survive offline.
+ */
+export async function getUserOrders(params: {
+  email: string;
+  uid?: string;
+  phone?: string;
+}): Promise<Order[]> {
+  const email = params.email.toLowerCase().trim();
+  const uid = params.uid || '';
+  const phone = (params.phone || '').trim().replace(/[\s-]/g, '');
+
+  const orderMap = new Map<string, Order>(); // keyed by orderId
+
+  // ── Source 1: Per-email localStorage index ─────────────────────────────────
+  if (typeof window !== 'undefined') {
+    try {
+      const emailKey = `lillyum_orders_${email}`;
+      const emailIndex: string[] = JSON.parse(localStorage.getItem(emailKey) || '[]');
+      const allLocal = getLocalOrders();
+      for (const oid of emailIndex) {
+        const found = allLocal.find((o) => o.orderId === oid || o.id === oid);
+        if (found) orderMap.set(found.orderId, found);
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── Source 2: Full local orders scan ──────────────────────────────────────
+  try {
+    const allLocal = getLocalOrders();
+    for (const o of allLocal) {
+      const oEmail = (o.customer?.email || '').toLowerCase().trim();
+      const oPhone = (o.customer?.phone || '').trim().replace(/[\s-]/g, '');
+      const matches =
+        (email && oEmail === email) ||
+        (phone && oPhone && oPhone === phone) ||
+        (uid && o.customerId === uid);
+      if (matches && !orderMap.has(o.orderId)) {
+        orderMap.set(o.orderId, o);
+      }
+    }
+  } catch { /* ignore */ }
+
+  // ── Source 3: Firestore query by customer email ────────────────────────────
+  try {
+    const firestoreQuery = getDocs(
+      query(collection(db, 'orders'), where('customer.email', '==', email))
+    );
+    const snap = await Promise.race([
+      firestoreQuery,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
+    ]);
+    if (snap && 'docs' in snap) {
+      for (const d of snap.docs) {
+        const o = { id: d.id, ...d.data() } as Order;
+        if (!orderMap.has(o.orderId)) {
+          orderMap.set(o.orderId, o);
+          // Cache this Firestore order locally so it's available offline
+          saveLocalOrder(o);
+        }
+      }
+    }
+  } catch { /* Firestore offline — local data is the source of truth */ }
+
+  // Sort by createdAt descending (newest first)
+  return Array.from(orderMap.values()).sort((a, b) => {
+    const tA = a.createdAt ? new Date(a.createdAt as string).getTime() : 0;
+    const tB = b.createdAt ? new Date(b.createdAt as string).getTime() : 0;
+    return tB - tA;
+  });
 }
 
 export async function updateOrderStatus(
